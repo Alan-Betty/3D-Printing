@@ -1,9 +1,28 @@
-import { useState, useMemo, useRef, useEffect } from 'react'
+import React, { useState, useMemo, useRef, useEffect } from 'react'
 import { PRIORITIES, PAINT_FINISHES, PAINT_TYPES } from '../constants/production'
 import { ColorSelector } from './ColorSelector'
 import { ColorSwatch } from './ColorSwatch'
 import { supabase, isConfigured, BUCKET } from '../supabase'
 import { logOrderChange } from '../services/historyService'
+import { Card } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { DatePicker } from '@/components/ui/date-picker'
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Slider } from '@/components/ui/slider'
+import { Switch } from '@/components/ui/switch'
+import { Separator } from '@/components/ui/separator'
+import { InputGroup, InputLeftAddon, InputRightAddon } from '@/components/ui/input-group'
+import { Field, FieldLabel, FieldDescription, FieldError } from '@/components/ui/field'
+import { Attachment, AttachmentList, AttachmentItem, AttachmentUpload } from '@/components/ui/attachment'
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select'
+import { Spinner } from '@/components/ui/spinner'
+import { Item, ItemMedia, ItemContent, ItemTitle, ItemDescription } from '@/components/ui/item'
+import { Sparkles, Camera, Box, Plus, Trash2, Calendar, Check, Layers, User } from 'lucide-react'
 
 const sanitize = (name) => name.replace(/[^\w.\-]+/g, '_')
 const MODEL_EXT = '.stl,.3mf,.obj,.gcode,.step,.stp,.zip'
@@ -16,6 +35,9 @@ export function NewOrderIntake({ user, isSandbox, onError, onSaved }) {
   const [weight, setWeight] = useState('')
   const [customerContact, setCustomerContact] = useState('')
   const [description, setDescription] = useState('')
+  const [infill, setInfill] = useState([20])
+  const [primerRequired, setPrimerRequired] = useState(false)
+  const [smoothingRequired, setSmoothingRequired] = useState(false)
 
   const [priority, setPriority] = useState('standard')
   const [deliveryDate, setDeliveryDate] = useState(() => {
@@ -222,197 +244,253 @@ export function NewOrderIntake({ user, isSandbox, onError, onSaved }) {
   }
 
   return (
-    <form className="intake-layout" onSubmit={handleSubmit} noValidate>
-      {/* Left Form Column */}
-      <div className="intake-form-column">
+    <form
+      className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start"
+      onSubmit={handleSubmit}
+      noValidate
+    >
+      {/* Left Form Column (8 cols on large screens) */}
+      <div className="lg:col-span-8 space-y-6">
         {/* Step 1: Customer & Object */}
-        <div className="form-card">
-          <div className="form-card-head">
-            <span className="card-step-badge">1</span>
+        <Card className="border-slate-800 bg-[#0d131f] p-4 sm:p-6 space-y-4 shadow-lg">
+          <div className="flex items-center gap-3 border-b border-slate-800/80 pb-3">
+            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/20 text-primary font-bold text-xs">
+              1
+            </span>
             <div>
-              <h3 className="form-card-title">Customer &amp; Object Information</h3>
-              <p className="form-card-sub">Identify the 3D-printed object and customer receiving it.</p>
+              <h3 className="text-sm sm:text-base font-bold text-white">
+                Customer &amp; Object Information
+              </h3>
+              <p className="text-xs text-slate-400">
+                Identify the 3D-printed object and customer receiving it.
+              </p>
             </div>
           </div>
 
-          <div className="form-grid-2">
-            <div className="form-group">
-              <label className="form-label" htmlFor="new-item">
-                Part / Item Name *
-              </label>
-              <input
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Field className="space-y-1.5">
+              <FieldLabel htmlFor="new-item" required>
+                Part / Item Name
+              </FieldLabel>
+              <Input
                 id="new-item"
                 value={item}
                 onChange={(e) => setItem(e.target.value)}
                 placeholder="e.g. Cyberpunk Katana, Articulated Dragon..."
                 required
+                className={touched && !item.trim() ? 'border-destructive' : ''}
               />
-            </div>
+            </Field>
 
-            <div className="form-group">
-              <label className="form-label" htmlFor="new-customer">
-                Customer Name *
-              </label>
-              <input
+            <Field className="space-y-1.5">
+              <FieldLabel htmlFor="new-customer" required>
+                Customer Name
+              </FieldLabel>
+              <Input
                 id="new-customer"
                 value={customer}
                 onChange={(e) => setCustomer(e.target.value)}
                 placeholder="e.g. Priya Sharma, Jordan Rivera..."
                 required
+                className={touched && !customer.trim() ? 'border-destructive' : ''}
               />
-            </div>
+            </Field>
 
-            <div className="form-group">
-              <label className="form-label" htmlFor="new-contact">
-                Contact Phone / Email <span className="form-label-opt">(Optional)</span>
-              </label>
-              <input
+            <Field className="space-y-1.5 sm:col-span-2">
+              <FieldLabel htmlFor="new-contact">Contact Phone / Email (Optional)</FieldLabel>
+              <Input
                 id="new-contact"
                 value={customerContact}
                 onChange={(e) => setCustomerContact(e.target.value)}
-                placeholder="+91 98765 43210"
+                placeholder="+91 98765 43210 or customer email"
               />
-            </div>
+            </Field>
 
-            <div className="form-grid-3" style={{ gap: '10px' }}>
-              <div className="form-group">
-                <label className="form-label" htmlFor="new-qty">Qty</label>
-                <input
+            <div className="grid grid-cols-3 gap-2.5 sm:col-span-2">
+              <Field className="space-y-1.5">
+                <FieldLabel htmlFor="new-qty">Qty</FieldLabel>
+                <Input
                   id="new-qty"
                   type="number"
                   min="1"
                   value={qty}
                   onChange={(e) => setQty(e.target.value)}
                 />
-              </div>
+              </Field>
 
-              <div className="form-group">
-                <label className="form-label" htmlFor="new-price">
-                  Price (₹) <span className="form-label-opt">(Optional)</span>
-                </label>
-                <input
-                  id="new-price"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={price}
-                  onChange={(e) => setPrice(e.target.value)}
-                  placeholder="0.00"
-                />
-              </div>
+              <Field className="space-y-1.5">
+                <FieldLabel htmlFor="new-price">Price</FieldLabel>
+                <InputGroup>
+                  <InputLeftAddon>₹</InputLeftAddon>
+                  <Input
+                    id="new-price"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={price}
+                    onChange={(e) => setPrice(e.target.value)}
+                    placeholder="0.00"
+                    className="rounded-l-none"
+                  />
+                </InputGroup>
+              </Field>
 
-              <div className="form-group">
-                <label className="form-label" htmlFor="new-weight">
-                  Weight (g) <span className="form-label-opt">(Optional)</span>
-                </label>
-                <input
-                  id="new-weight"
-                  type="number"
-                  min="0"
-                  step="any"
-                  value={weight}
-                  onChange={(e) => setWeight(e.target.value)}
-                  placeholder="grams"
-                />
-              </div>
+              <Field className="space-y-1.5">
+                <FieldLabel htmlFor="new-weight">Net Weight</FieldLabel>
+                <InputGroup>
+                  <Input
+                    id="new-weight"
+                    type="number"
+                    min="0"
+                    step="any"
+                    value={weight}
+                    onChange={(e) => setWeight(e.target.value)}
+                    placeholder="0"
+                    className="rounded-r-none"
+                  />
+                  <InputRightAddon>g</InputRightAddon>
+                </InputGroup>
+              </Field>
             </div>
+
+            {/* Infill Density Slider */}
+            <Field className="space-y-2 sm:col-span-2 pt-2 border-t border-slate-800/80">
+              <div className="flex items-center justify-between text-xs">
+                <FieldLabel className="text-slate-300">Internal Print Infill Density</FieldLabel>
+                <span className="font-mono text-cyan font-bold">{infill[0]}%</span>
+              </div>
+              <Slider
+                value={infill}
+                onValueChange={setInfill}
+                min={0}
+                max={100}
+                step={5}
+                className="py-1"
+              />
+              <FieldDescription>
+                Adjust density: 15–20% standard, 35–50% structural parts, 100% solid.
+              </FieldDescription>
+            </Field>
           </div>
 
           {hasValidWeight && (
-            <div style={{ marginTop: '12px', fontSize: '12px', color: 'var(--accent)', fontFamily: 'var(--font-mono)' }}>
-              🧵 Calculated with +10% misc overhead: <strong>{totalFilamentGrams}g</strong> ({weightNum}g net + {Math.round(weightNum * 0.1 * 10) / 10}g misc)
+            <div className="rounded-md border border-[#ff5e1e]/20 bg-[#ff5e1e]/5 p-2.5 text-xs font-mono text-[#ff783b]">
+              🧵 Calculated with +10% misc overhead:{' '}
+              <strong>{totalFilamentGrams}g</strong> ({weightNum}g net +{' '}
+              {Math.round(weightNum * 0.1 * 10) / 10}g misc)
             </div>
           )}
-        </div>
+        </Card>
 
         {/* Step 2: Priority & Deadline */}
-        <div className="form-card">
-          <div className="form-card-head">
-            <span className="card-step-badge">2</span>
+        <Card className="border-slate-800 bg-[#0d131f] p-4 sm:p-6 space-y-4 shadow-lg">
+          <div className="flex items-center gap-3 border-b border-slate-800/80 pb-3">
+            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/20 text-primary font-bold text-xs">
+              2
+            </span>
             <div>
-              <h3 className="form-card-title">Priority &amp; Delivery Schedule</h3>
-              <p className="form-card-sub">Set queue priority and target completion deadline.</p>
+              <h3 className="text-sm sm:text-base font-bold text-white">
+                Priority &amp; Delivery Schedule
+              </h3>
+              <p className="text-xs text-slate-400">
+                Set queue priority and target completion deadline.
+              </p>
             </div>
           </div>
 
-          <div className="form-grid-2">
-            <div className="form-group">
-              <label className="form-label">Processing Priority</label>
-              <div className="priority-toggle-wrap">
-                <button
-                  type="button"
-                  className={`prio-btn prio-standard ${priority === 'standard' ? 'active' : ''}`}
-                  onClick={() => setPriority('standard')}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Field className="space-y-1.5">
+              <FieldLabel>Processing Priority</FieldLabel>
+              <ToggleGroup
+                type="single"
+                value={priority}
+                onValueChange={(val) => val && setPriority(val)}
+                className="grid grid-cols-2 gap-2"
+              >
+                <ToggleGroupItem
+                  value="standard"
+                  variant="outline"
+                  className="w-full text-xs font-medium border-slate-700 data-[state=on]:bg-slate-800 data-[state=on]:border-slate-500 text-slate-300"
                 >
                   Standard Priority
-                </button>
-                <button
-                  type="button"
-                  className={`prio-btn prio-express ${priority === 'express' ? 'active' : ''}`}
-                  onClick={() => setPriority('express')}
+                </ToggleGroupItem>
+                <ToggleGroupItem
+                  value="express"
+                  variant="outline"
+                  className="w-full text-xs font-semibold border-slate-700 data-[state=on]:border-primary data-[state=on]:bg-primary/20 data-[state=on]:text-primary"
                 >
-                  ⚡ Express Priority
-                </button>
-              </div>
-            </div>
+                  <Sparkles className="mr-1.5 h-3.5 w-3.5 text-primary" /> Express Priority
+                </ToggleGroupItem>
+              </ToggleGroup>
+            </Field>
 
-            <div className="form-group">
-              <label className="form-label" htmlFor="new-date">Expected Delivery Date</label>
-              <input
-                id="new-date"
-                type="date"
-                value={deliveryDate}
-                onChange={(e) => setDeliveryDate(e.target.value)}
+            <Field className="space-y-1.5">
+              <FieldLabel htmlFor="new-date">Expected Delivery Date</FieldLabel>
+              <DatePicker
+                date={deliveryDate}
+                onChange={setDeliveryDate}
+                placeholder="Select expected date"
               />
-              <div style={{ display: 'flex', gap: '6px', marginTop: '6px' }}>
-                <button
-                  type="button"
-                  style={{ fontSize: '11px', color: 'var(--muted)', padding: '2px 8px', borderRadius: 'var(--radius-xs)', background: 'var(--bg-deep)', border: '1px solid var(--line)' }}
-                  onClick={() => handleDatePreset(3)}
-                >
-                  +3 Days
-                </button>
-                <button
-                  type="button"
-                  style={{ fontSize: '11px', color: 'var(--muted)', padding: '2px 8px', borderRadius: 'var(--radius-xs)', background: 'var(--bg-deep)', border: '1px solid var(--line)' }}
-                  onClick={() => handleDatePreset(7)}
-                >
-                  +1 Week
-                </button>
-                <button
-                  type="button"
-                  style={{ fontSize: '11px', color: 'var(--muted)', padding: '2px 8px', borderRadius: 'var(--radius-xs)', background: 'var(--bg-deep)', border: '1px solid var(--line)' }}
-                  onClick={() => handleDatePreset(14)}
-                >
-                  +2 Weeks
-                </button>
+            </Field>
+
+            {/* Post-Processing Checkbox Options & Expedite Switch */}
+            <div className="sm:col-span-2 flex flex-wrap items-center gap-5 pt-1 border-t border-slate-800/60">
+              <label className="flex items-center gap-2 cursor-pointer text-xs text-slate-300 hover:text-white select-none">
+                <Checkbox
+                  checked={primerRequired}
+                  onCheckedChange={setPrimerRequired}
+                />
+                <span>Primer base coat required</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer text-xs text-slate-300 hover:text-white select-none">
+                <Checkbox
+                  checked={smoothingRequired}
+                  onCheckedChange={setSmoothingRequired}
+                />
+                <span>Acetone / vapor smoothing</span>
+              </label>
+              <div className="flex items-center gap-2 select-none">
+                <Switch
+                  id="intake-express-switch"
+                  checked={priority === 'express'}
+                  onCheckedChange={(checked) => setPriority(checked ? 'express' : 'standard')}
+                />
+                <label htmlFor="intake-express-switch" className="text-xs text-slate-300 cursor-pointer">
+                  Rush expedite
+                </label>
               </div>
             </div>
           </div>
 
-          <div className="form-group" style={{ marginTop: '16px' }}>
-            <label className="form-label" htmlFor="new-desc">General Order Notes / Description</label>
-            <textarea
+          <div className="space-y-1.5">
+            <Label htmlFor="new-desc">General Order Notes / Description</Label>
+            <Textarea
               id="new-desc"
-              rows="2"
+              rows={2}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Print orientation, infill percentage, or customer preferences..."
             />
           </div>
-        </div>
+        </Card>
 
         {/* Step 3: Paint & Finishing Specifications */}
-        <div className="form-card">
-          <div className="form-card-head">
-            <span className="card-step-badge">3</span>
+        <Card className="border-slate-800 bg-[#0d131f] p-4 sm:p-6 space-y-4 shadow-lg">
+          <div className="flex items-center gap-3 border-b border-slate-800/80 pb-3">
+            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/20 text-primary font-bold text-xs">
+              3
+            </span>
             <div>
-              <h3 className="form-card-title">Paint Colours &amp; Surface Specifications</h3>
-              <p className="form-card-sub">Select studio paint shades, chemistry, and surface finish.</p>
+              <h3 className="text-sm sm:text-base font-bold text-white">
+                Paint Colours &amp; Surface Specifications
+              </h3>
+              <p className="text-xs text-slate-400">
+                Select studio paint shades, chemistry, and surface finish.
+              </p>
             </div>
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div className="space-y-4">
             <ColorSelector
               label="Primary Base Colour"
               name={primaryColorName}
@@ -436,229 +514,211 @@ export function NewOrderIntake({ user, isSandbox, onError, onSaved }) {
               }}
             />
 
-            <div className="form-grid-2">
-              <div className="form-group">
-                <label className="form-label" htmlFor="new-paint-type">Paint Chemistry</label>
-                <select
-                  id="new-paint-type"
-                  value={paintType}
-                  onChange={(e) => setPaintType(e.target.value)}
-                >
-                  {PAINT_TYPES.map((t) => (
-                    <option key={t} value={t}>{t}</option>
-                  ))}
-                </select>
-              </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Field className="space-y-1.5">
+                <FieldLabel htmlFor="new-paint-type">Paint Chemistry</FieldLabel>
+                <Select value={paintType} onValueChange={setPaintType}>
+                  <SelectTrigger id="new-paint-type" className="border-border bg-[#101623] text-foreground text-xs h-9">
+                    <SelectValue placeholder="Select paint chemistry" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PAINT_TYPES.map((t) => (
+                      <SelectItem key={t} value={t} className="text-xs">
+                        {t}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </Field>
 
-              <div className="form-group">
-                <label className="form-label" htmlFor="new-finish">Surface Finish</label>
-                <select
-                  id="new-finish"
-                  value={finish}
-                  onChange={(e) => setFinish(e.target.value)}
-                >
-                  {PAINT_FINISHES.map((f) => (
-                    <option key={f} value={f}>{f}</option>
-                  ))}
-                </select>
-              </div>
+              <Field className="space-y-1.5">
+                <FieldLabel htmlFor="new-finish">Surface Finish</FieldLabel>
+                <Select value={finish} onValueChange={setFinish}>
+                  <SelectTrigger id="new-finish" className="border-border bg-[#101623] text-foreground text-xs h-9">
+                    <SelectValue placeholder="Select surface finish" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PAINT_FINISHES.map((f) => (
+                      <SelectItem key={f} value={f} className="text-xs">
+                        {f}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </Field>
             </div>
 
-            <div className="form-group">
-              <label className="form-label" htmlFor="new-instructions">Special Painting Instructions</label>
-              <textarea
+            <div className="space-y-1.5">
+              <Label htmlFor="new-instructions">Special Painting Instructions</Label>
+              <Textarea
                 id="new-instructions"
-                rows="2"
+                rows={2}
                 value={specialInstructions}
                 onChange={(e) => setSpecialInstructions(e.target.value)}
                 placeholder="e.g. Drybrush weathering on edges; gloss clear coat on visor..."
               />
             </div>
           </div>
-        </div>
+        </Card>
 
         {/* Step 4: Files & Photos */}
-        <div className="form-card">
-          <div className="form-card-head">
-            <span className="card-step-badge">4</span>
+        <Card className="border-slate-800 bg-[#0d131f] p-4 sm:p-6 space-y-4 shadow-lg">
+          <div className="flex items-center gap-3 border-b border-slate-800/80 pb-3">
+            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/20 text-primary font-bold text-xs">
+              4
+            </span>
             <div>
-              <h3 className="form-card-title">3D CAD Files &amp; Product Photos</h3>
-              <p className="form-card-sub">Upload STL/3MF files and camera reference photos.</p>
+              <h3 className="text-sm sm:text-base font-bold text-white">
+                3D CAD Files &amp; Product Photos
+              </h3>
+              <p className="text-xs text-slate-400">
+                Upload STL/3MF files and camera reference photos.
+              </p>
             </div>
           </div>
 
-          <div className="form-grid-2">
-            <div>
-              <input
-                ref={fileInputRef}
-                type="file"
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <AttachmentUpload
+                title="Attach Reference Photos"
+                description="Click or drag preview images (PNG, JPG, WebP)"
                 accept="image/*"
-                multiple
-                hidden
-                onChange={(e) => handleAddPhotos(e.target.files)}
+                onFilesSelected={handleAddPhotos}
+                icon={Camera}
               />
-              <input
-                ref={cameraInputRef}
-                type="file"
-                accept="image/*"
-                capture="environment"
-                hidden
-                onChange={(e) => handleAddPhotos(e.target.files)}
-              />
-              <div
-                className="dropzone"
-                onClick={() => fileInputRef.current?.click()}
-                role="button"
-                tabIndex={0}
-              >
-                <span className="dropzone-icon">📷</span>
-                <span style={{ fontWeight: 600, fontSize: '13.5px', color: 'var(--text-bright)' }}>
-                  Attach Product Photos
-                </span>
-                <span style={{ fontSize: '11.5px', color: 'var(--muted-2)' }}>
-                  Drag &amp; drop images or click to browse
-                </span>
-                <button
-                  type="button"
-                  style={{ marginTop: '6px', fontSize: '11.5px', padding: '3px 10px', background: 'var(--panel-elevated)', border: '1px solid var(--line)', borderRadius: 'var(--radius-xs)', color: 'var(--muted)' }}
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    cameraInputRef.current?.click()
-                  }}
-                >
-                  📸 Launch Camera
-                </button>
-              </div>
-
-              {images.length > 0 && (
-                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '10px' }}>
-                  {previews.map((p, idx) => (
-                    <div key={idx} style={{ position: 'relative', width: '60px', height: '60px', borderRadius: 'var(--radius-sm)', overflow: 'hidden', border: '1px solid var(--line)' }}>
-                      <img src={p.url} alt="preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                      <button
-                        type="button"
-                        style={{ position: 'absolute', top: '2px', right: '2px', background: 'rgba(0,0,0,0.7)', color: '#fff', borderRadius: '50%', width: '16px', height: '16px', fontSize: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                        onClick={() => setImages((prev) => prev.filter((_, i) => i !== idx))}
-                      >
-                        ✕
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <div>
-              <input
-                ref={modelInputRef}
-                type="file"
+              <AttachmentUpload
+                title="Attach 3D CAD Mesh Models"
+                description=".stl, .3mf, .obj, .gcode, .step, .zip"
                 accept={MODEL_EXT}
-                multiple
-                hidden
-                onChange={(e) => handleAddModels(e.target.files)}
+                onFilesSelected={handleAddModels}
+                icon={Box}
               />
-              <div
-                className="dropzone"
-                onClick={() => modelInputRef.current?.click()}
-                role="button"
-                tabIndex={0}
-              >
-                <span className="dropzone-icon">🧊</span>
-                <span style={{ fontWeight: 600, fontSize: '13.5px', color: 'var(--text-bright)' }}>
-                  Attach 3D CAD Models
-                </span>
-                <span style={{ fontSize: '11.5px', color: 'var(--muted-2)' }}>
-                  .stl, .3mf, .obj, .gcode, .step, .zip
-                </span>
-              </div>
-
-              {modelFiles.length > 0 && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '10px' }}>
-                  {modelFiles.map((m, idx) => (
-                    <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 10px', background: 'var(--bg-deep)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--line)', fontSize: '12px' }}>
-                      <span style={{ color: 'var(--cyan)' }}>🧊 {m.name}</span>
-                      <button
-                        type="button"
-                        style={{ color: 'var(--danger)' }}
-                        onClick={() => setModelFiles((prev) => prev.filter((_, i) => i !== idx))}
-                      >
-                        ✕
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
             </div>
+
+            {(images.length > 0 || modelFiles.length > 0) && (
+              <div className="space-y-2 pt-2 border-t border-slate-800">
+                <div className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                  Staged Attachments ({images.length + modelFiles.length})
+                </div>
+                <AttachmentList>
+                  {previews.map((p, idx) => (
+                    <AttachmentItem
+                      key={`img-${idx}`}
+                      name={p.name}
+                      type="image"
+                      previewUrl={p.url}
+                      onRemove={() =>
+                        setImages((prev) => prev.filter((_, i) => i !== idx))
+                      }
+                    />
+                  ))}
+                  {modelFiles.map((m, idx) => (
+                    <AttachmentItem
+                      key={`model-${idx}`}
+                      name={m.name}
+                      size={m.size}
+                      type="model"
+                      onRemove={() =>
+                        setModelFiles((prev) => prev.filter((_, i) => i !== idx))
+                      }
+                    />
+                  ))}
+                </AttachmentList>
+              </div>
+            )}
           </div>
-        </div>
+        </Card>
 
         {/* Action Buttons */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '12px', marginTop: '10px' }}>
-          <button
+        <div className="flex items-center justify-end gap-3 pt-2">
+          <Button
             type="button"
-            className="btn-secondary"
+            variant="outline"
             onClick={resetForm}
             disabled={busy}
+            className="text-xs"
           >
             Clear Form
-          </button>
-          <button
+          </Button>
+          <Button
             type="submit"
-            className="btn-primary"
+            variant="default"
             disabled={busy || !isValid}
-            style={{ padding: '12px 28px', fontSize: '15px' }}
+            className="bg-primary text-white hover:bg-primary/90 text-sm font-semibold px-6 py-2.5 flex items-center gap-2"
           >
-            {busy ? 'Logging Order…' : 'Log Order into Production Queue →'}
-          </button>
+            {busy ? (
+              <>
+                <Spinner size="sm" className="text-white" />
+                <span>Logging Order…</span>
+              </>
+            ) : (
+              'Log Order into Production Queue →'
+            )}
+          </Button>
         </div>
       </div>
 
-      {/* Right Sticky Column: Real-Time Live Order Preview Card */}
-      <div className="live-preview-column">
-        <div className="preview-card-wrap">
-          <div className="preview-badge-header">
-            <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11.5px', color: 'var(--accent)', fontWeight: 700, letterSpacing: '0.05em' }}>
+      {/* Right Column: Real-Time Live Order Preview Card (4 cols on lg screens, sticky) */}
+      <div className="lg:col-span-4 sticky top-6">
+        <Card className="border-slate-800 bg-[#0d131f] p-5 space-y-4 shadow-xl">
+          <div className="flex items-center justify-between border-b border-slate-800/80 pb-3">
+            <span className="font-mono text-xs font-bold text-primary tracking-wider">
               ● LIVE QUEUE PREVIEW
             </span>
             {priority === 'express' ? (
-              <span className="badge-prio express">⚡ Express Priority</span>
+              <Badge variant="express" className="py-0 px-2 text-[10px]">
+                <Sparkles className="mr-1 h-3 w-3" /> Express
+              </Badge>
             ) : (
-              <span className="badge-prio standard">Standard Priority</span>
+              <Badge variant="muted" className="text-[10px]">
+                Standard
+              </Badge>
             )}
           </div>
 
-          <h3 style={{ fontSize: '19px', fontWeight: 700, color: 'var(--text-bright)', margin: '0 0 6px' }}>
-            {item || 'Untitled Part / Print'}
-            {Number(qty) > 1 && <span className="clean-qty-tag" style={{ marginLeft: '8px' }}>×{qty}</span>}
-          </h3>
-
-          <div style={{ fontSize: '13px', color: 'var(--muted)', marginBottom: '16px' }}>
-            👤 {customer || 'Customer Name'} {customerContact && `· ${customerContact}`}
+          <div>
+            <h4 className="text-base font-bold text-white truncate">
+              {item || 'Untitled Part / Print'}
+              {Number(qty) > 1 && (
+                <span className="ml-2 rounded bg-slate-800 px-1.5 py-0.2 font-mono text-xs text-cyan">
+                  ×{qty}
+                </span>
+              )}
+            </h4>
+            <div className="text-xs text-slate-400 mt-1">
+              👤 {customer || 'Customer Name'}{' '}
+              {customerContact && `· ${customerContact}`}
+            </div>
           </div>
 
           {/* Metrics Preview */}
-          <div className="card-metrics-strip" style={{ marginBottom: '16px' }}>
-            <div className="card-metric-block">
-              <span className="card-metric-label">Quoted Price</span>
-              <span className="card-metric-val price">
-                {priceNum > 0 ? `₹${priceNum.toLocaleString('en-IN')}` : '₹0.00 (Optional)'}
+          <div className="grid grid-cols-2 gap-2 rounded-lg bg-[#0a0f19] p-3 text-xs">
+            <div>
+              <span className="text-[10px] uppercase font-bold text-slate-500">
+                Price
+              </span>
+              <span className="block font-mono text-sm font-bold text-[#05d5b3] mt-0.5">
+                {priceNum > 0
+                  ? `₹${priceNum.toLocaleString('en-IN')}`
+                  : '₹0.00 (Optional)'}
               </span>
             </div>
-
-            <div className="card-metric-block">
-              <span className="card-metric-label">Filament (+10% Misc)</span>
-              <span className="card-metric-val weight">
+            <div>
+              <span className="text-[10px] uppercase font-bold text-slate-500">
+                Filament (+10%)
+              </span>
+              <span className="block font-mono text-xs font-semibold text-[#ff783b] mt-0.5">
                 {hasValidWeight ? `🧵 ${totalFilamentGrams}g` : '0g (Optional)'}
               </span>
             </div>
           </div>
 
           {/* Paint Swatch Preview */}
-          <div style={{ padding: '12px', background: 'var(--bg-deep)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--line)', marginBottom: '16px' }}>
-            <div style={{ fontSize: '11px', fontFamily: 'var(--font-mono)', color: 'var(--muted-2)', textTransform: 'uppercase', marginBottom: '8px' }}>
+          <div className="rounded-lg border border-slate-800 bg-[#0a0f19] p-3">
+            <div className="text-[10px] uppercase font-mono text-slate-500 mb-2">
               Selected Paint &amp; Finish
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div className="flex items-center gap-2 flex-wrap">
               {primaryColorName || primaryColorCode ? (
                 <ColorSwatch
                   name={primaryColorName}
@@ -669,7 +729,7 @@ export function NewOrderIntake({ user, isSandbox, onError, onSaved }) {
                   compact
                 />
               ) : (
-                <span style={{ fontSize: '12px', color: 'var(--muted-2)', fontStyle: 'italic' }}>
+                <span className="text-xs italic text-slate-500">
                   Standard Primer
                 </span>
               )}
@@ -684,20 +744,45 @@ export function NewOrderIntake({ user, isSandbox, onError, onSaved }) {
             </div>
           </div>
 
+          {/* Infill & Processing Badges */}
+          <div className="flex flex-wrap items-center gap-1.5 pt-1 text-[11px]">
+            <span className="rounded bg-slate-800 px-2 py-0.5 font-mono text-cyan">
+              Infill: {infill[0]}%
+            </span>
+            {primerRequired && (
+              <span className="rounded bg-primary/10 border border-primary/20 px-2 py-0.5 text-primary text-[10.5px]">
+                +Primer
+              </span>
+            )}
+            {smoothingRequired && (
+              <span className="rounded bg-teal/10 border border-teal/20 px-2 py-0.5 text-teal text-[10.5px]">
+                +Vapor Smooth
+              </span>
+            )}
+          </div>
+
+          <Separator className="bg-slate-800" />
+
           {/* Delivery Target Preview */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12.5px', color: 'var(--muted)' }}>
-            <span>Target Delivery:</span>
-            <strong style={{ color: 'var(--text-bright)' }}>
-              {deliveryDate ? new Date(deliveryDate).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' }) : 'None'}
+          <div className="flex items-center justify-between text-xs pt-1">
+            <span className="text-slate-400">Target Delivery:</span>
+            <strong className="text-white">
+              {deliveryDate
+                ? new Date(deliveryDate).toLocaleDateString('en-IN', {
+                    month: 'short',
+                    day: 'numeric',
+                    year: 'numeric',
+                  })
+                : 'None'}
             </strong>
           </div>
 
           {/* Attachments Count Preview */}
-          <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: '1px solid var(--line)', display: 'flex', gap: '12px', fontSize: '12px', color: 'var(--muted-2)' }}>
+          <div className="flex items-center gap-3 pt-3 border-t border-slate-800 text-xs text-slate-400">
             <span>📷 {images.length} photo(s)</span>
             <span>🧊 {modelFiles.length} 3D model(s)</span>
           </div>
-        </div>
+        </Card>
       </div>
     </form>
   )

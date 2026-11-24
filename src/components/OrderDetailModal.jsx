@@ -1,9 +1,41 @@
-import { useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { PRODUCTION_STATUSES, STATUS_LOOKUP } from '../constants/production'
 import { getDeliveryDeadlineInfo } from '../services/orderService'
 import { fetchOrderHistory } from '../services/historyService'
 import { ColorSwatch } from './ColorSwatch'
 import { ProgressIndicator } from './ProgressIndicator'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
+import { Item, ItemMedia, ItemContent, ItemTitle, ItemDescription, ItemActions } from '@/components/ui/item'
+import { AttachmentList, AttachmentItem } from '@/components/ui/attachment'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Separator } from '@/components/ui/separator'
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip'
+import { Progress } from '@/components/ui/progress'
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+} from '@/components/ui/dropdown-menu'
+import {
+  X,
+  Sparkles,
+  Calendar,
+  Layers,
+  ChevronDown,
+  Pencil,
+  Trash2,
+  Clock,
+  History,
+  FileText,
+  Image as ImageIcon,
+  Box,
+} from 'lucide-react'
 
 export function OrderDetailModal({
   order,
@@ -16,12 +48,15 @@ export function OrderDetailModal({
   const [activeTab, setActiveTab] = useState('overview') // 'overview' | 'status' | 'history' | 'files'
   const [history, setHistory] = useState([])
   const [loadingHistory, setLoadingHistory] = useState(false)
-  const [selectedStatus, setSelectedStatus] = useState(order?.production_status || 'order_received')
+  const [selectedStatus, setSelectedStatus] = useState(
+    order?.production_status || 'order_received'
+  )
   const [statusNote, setStatusNote] = useState('')
   const [activePhoto, setActivePhoto] = useState(order?.imageUrls?.[0] || null)
 
   const deadline = getDeliveryDeadlineInfo(order)
-  const statusMeta = STATUS_LOOKUP[order.production_status] || STATUS_LOOKUP.order_received
+  const statusMeta =
+    STATUS_LOOKUP[order.production_status] || STATUS_LOOKUP.order_received
   const isExpress = order.priority === 'express'
   const colors = order.colors || []
   const photos = order.imageUrls || []
@@ -66,109 +101,161 @@ export function OrderDetailModal({
   }
 
   const weightNum = Number(order.weight_g)
-  const hasValidWeight = order.weight_g != null && !Number.isNaN(weightNum) && weightNum > 0
+  const hasValidWeight =
+    order.weight_g != null && !Number.isNaN(weightNum) && weightNum > 0
 
   return (
-    <div className="scrim" onClick={onClose}>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-3 sm:p-6 backdrop-blur-sm animate-in fade-in-50"
+      onClick={onClose}
+    >
       <div
-        className="sheet sheet-wide"
+        className="relative flex w-full max-w-3xl flex-col max-h-[92vh] overflow-hidden rounded-xl border border-slate-800 bg-[#0d131f] shadow-2xl animate-in zoom-in-95"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
         aria-labelledby="modal-order-title"
       >
-        {/* Fixed Header */}
-        <div className="sheet-head">
-          <button type="button" className="sheet-x" onClick={onClose} aria-label="Close modal">
-            ✕
-          </button>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <span style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', color: 'var(--cyan)' }}>
-              Order ID: #{order.id}
-            </span>
-            <span style={{ fontSize: '12px', color: 'var(--muted-2)' }}>
-              Placed: {formatDateTime(order.created_at)}
-            </span>
-            {isExpress ? (
-              <span className="badge-prio express">⚡ Express Priority</span>
-            ) : (
-              <span className="badge-prio standard">Standard Priority</span>
-            )}
+        {/* Header Bar */}
+        <div className="flex flex-col gap-2 border-b border-slate-800 bg-[#090d16] p-4 sm:p-5">
+          <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center gap-2 text-xs">
+              <span className="font-mono text-cyan font-bold bg-cyan/10 px-2 py-0.5 rounded border border-cyan/20">
+                #{order.id.slice(0, 8)}
+              </span>
+              <span className="text-slate-400">
+                Placed: {formatDateTime(order.created_at)}
+              </span>
+              {isExpress ? (
+                <Badge variant="express" className="py-0 px-2 text-[10.5px]">
+                  <Sparkles className="mr-1 h-3 w-3" /> Express
+                </Badge>
+              ) : (
+                <Badge variant="muted" className="text-[10.5px]">
+                  Standard
+                </Badge>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2">
+              {/* Quick Move to list dropdown in header */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="xs"
+                    className="h-7 gap-1 border-slate-700 bg-slate-800/80 text-xs text-slate-200 hover:bg-slate-700"
+                  >
+                    <span
+                      className="h-2 w-2 rounded-full"
+                      style={{ backgroundColor: statusMeta.color }}
+                    />
+                    <span>{statusMeta.label}</span>
+                    <ChevronDown className="h-3 w-3 opacity-60" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuLabel>Move order to list</DropdownMenuLabel>
+                  {PRODUCTION_STATUSES.map((status) => (
+                    <DropdownMenuItem
+                      key={status.id}
+                      disabled={order.production_status === status.id}
+                      onClick={() => onStatusChange(order, status.id)}
+                      className="flex items-center gap-2"
+                    >
+                      <span
+                        className="h-2 w-2 rounded-full"
+                        style={{ backgroundColor: status.color }}
+                      />
+                      <span>{status.label}</span>
+                      {order.production_status === status.id && (
+                        <span className="ml-auto text-[10px] text-slate-400">(current)</span>
+                      )}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              <button
+                type="button"
+                className="rounded-sm p-1 text-slate-400 hover:text-white"
+                onClick={onClose}
+                aria-label="Close modal"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
           </div>
-          <h2 id="modal-order-title" className="sheet-title" style={{ fontSize: '22px', marginTop: '2px' }}>
-            {order.item} {order.qty > 1 && <span className="clean-qty-tag">×{order.qty}</span>}
+
+          <h2
+            id="modal-order-title"
+            className="text-lg sm:text-xl font-bold text-white tracking-tight"
+          >
+            {order.item}{' '}
+            {order.qty > 1 && (
+              <span className="rounded bg-slate-800 px-2 py-0.5 text-xs font-mono text-cyan">
+                ×{order.qty}
+              </span>
+            )}
           </h2>
         </div>
 
-        {/* Modal Navigation Tabs */}
-        <div className="modal-tabs" role="tablist">
-          <button
-            type="button"
-            role="tab"
-            aria-selected={activeTab === 'overview'}
-            className={`modal-tab ${activeTab === 'overview' ? 'active' : ''}`}
-            onClick={() => setActiveTab('overview')}
-          >
-            📋 Overview &amp; Specs
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={activeTab === 'status'}
-            className={`modal-tab ${activeTab === 'status' ? 'active' : ''}`}
-            onClick={() => setActiveTab('status')}
-          >
-            🔄 Production Tracker
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={activeTab === 'history'}
-            className={`modal-tab ${activeTab === 'history' ? 'active' : ''}`}
-            onClick={() => setActiveTab('history')}
-          >
-            📜 Activity History ({history.length})
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={activeTab === 'files'}
-            className={`modal-tab ${activeTab === 'files' ? 'active' : ''}`}
-            onClick={() => setActiveTab('files')}
-          >
-            📁 Files &amp; Photos ({photos.length + modelFiles.length})
-          </button>
-        </div>
+        {/* Modal Navigation Tabs using shadcn Tabs */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col flex-1 overflow-hidden">
+          <div className="border-b border-slate-800 bg-[#0b0f19] px-4 overflow-x-auto">
+            <TabsList className="bg-transparent h-auto p-0 gap-1">
+              <TabsTrigger
+                value="overview"
+                className="gap-1.5 px-3 py-2.5 text-xs data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary rounded-none"
+              >
+                <FileText className="h-3.5 w-3.5" />
+                <span>Overview &amp; Specs</span>
+              </TabsTrigger>
+              <TabsTrigger
+                value="status"
+                className="gap-1.5 px-3 py-2.5 text-xs data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary rounded-none"
+              >
+                <Layers className="h-3.5 w-3.5" />
+                <span>Production Tracker</span>
+              </TabsTrigger>
+              <TabsTrigger
+                value="history"
+                className="gap-1.5 px-3 py-2.5 text-xs data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary rounded-none"
+              >
+                <History className="h-3.5 w-3.5" />
+                <span>Activity Log ({history.length})</span>
+              </TabsTrigger>
+              <TabsTrigger
+                value="files"
+                className="gap-1.5 px-3 py-2.5 text-xs data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary rounded-none"
+              >
+                <Box className="h-3.5 w-3.5" />
+                <span>Files &amp; Photos ({photos.length + modelFiles.length})</span>
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
-        {/* Scrollable Content Body */}
-        <div className="sheet-body">
+          {/* Scrollable Content Body */}
+          <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5">
           {/* TAB 1: OVERVIEW */}
           {activeTab === 'overview' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            <div className="space-y-4">
               {/* Delivery Deadline Alert Box */}
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  padding: '14px 18px',
-                  background: 'var(--panel)',
-                  border: '1px solid var(--line-light)',
-                  borderRadius: 'var(--radius-md)',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <span style={{ fontSize: '24px' }}>📅</span>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-lg border border-slate-800 bg-[#111726] p-3.5">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-800/80 text-cyan">
+                    <Calendar className="h-5 w-5" />
+                  </div>
                   <div>
-                    <div style={{ fontSize: '11px', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', color: 'var(--muted-2)' }}>
+                    <div className="text-[10px] uppercase font-mono tracking-wider text-slate-400">
                       Expected Delivery Target
                     </div>
-                    <div style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text-bright)' }}>
+                    <div className="text-sm font-semibold text-white">
                       {order.delivery_date
                         ? new Date(order.delivery_date).toLocaleDateString('en-IN', {
-                            weekday: 'long',
+                            weekday: 'short',
                             day: 'numeric',
-                            month: 'long',
+                            month: 'short',
                             year: 'numeric',
                           })
                         : 'No delivery date assigned'}
@@ -176,91 +263,114 @@ export function OrderDetailModal({
                   </div>
                 </div>
 
-                <span className={`clean-deadline-tag ${deadline.badgeClass}`} style={{ fontSize: '12px', padding: '4px 12px' }}>
-                  {deadline.badgeText}
-                </span>
+                {order.delivery_date && (
+                  <span
+                    className={`clean-deadline-tag ${deadline.badgeClass} self-start sm:self-center text-xs py-1 px-2.5`}
+                  >
+                    {deadline.badgeText}
+                  </span>
+                )}
               </div>
 
               {/* Order Information Grid */}
-              <div className="form-card" style={{ padding: '20px' }}>
-                <h3 style={{ margin: '0 0 16px', fontSize: '15px', color: 'var(--text-bright)' }}>
+              <div className="rounded-lg border border-slate-800 bg-[#111726] p-4">
+                <h3 className="mb-3 text-sm font-semibold text-white">
                   Order &amp; Customer Specs
                 </h3>
 
-                <div className="form-grid-3">
-                  <div className="card-metric-block">
-                    <span className="card-metric-label">Customer Name</span>
-                    <span style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text-bright)', marginTop: '4px' }}>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                  <div className="rounded-md bg-[#0a0f19] p-3">
+                    <span className="text-[10px] uppercase font-bold text-slate-500">
+                      Customer
+                    </span>
+                    <span className="block text-sm font-semibold text-white mt-0.5 truncate">
                       {order.customer}
                     </span>
                   </div>
 
-                  <div className="card-metric-block">
-                    <span className="card-metric-label">Customer Contact</span>
-                    <span style={{ fontSize: '14px', color: 'var(--muted)', marginTop: '4px' }}>
+                  <div className="rounded-md bg-[#0a0f19] p-3">
+                    <span className="text-[10px] uppercase font-bold text-slate-500">
+                      Contact
+                    </span>
+                    <span className="block text-xs text-slate-300 mt-0.5 truncate">
                       {order.customer_contact || 'None provided'}
                     </span>
                   </div>
 
-                  <div className="card-metric-block">
-                    <span className="card-metric-label">Quantity</span>
-                    <span style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text-bright)', marginTop: '4px' }}>
+                  <div className="rounded-md bg-[#0a0f19] p-3">
+                    <span className="text-[10px] uppercase font-bold text-slate-500">
+                      Quantity
+                    </span>
+                    <span className="block text-sm font-semibold text-white mt-0.5">
                       {order.qty || 1} pcs
                     </span>
                   </div>
 
-                  <div className="card-metric-block">
-                    <span className="card-metric-label">Price Charged</span>
-                    <span className="card-metric-val price" style={{ marginTop: '4px' }}>
+                  <div className="rounded-md bg-[#0a0f19] p-3">
+                    <span className="text-[10px] uppercase font-bold text-slate-500">
+                      Price Charged
+                    </span>
+                    <span className="block text-sm font-bold font-mono text-[#05d5b3] mt-0.5">
                       {Number(order.price || 0) > 0 ? (
-                        `₹${Number(order.price).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`
+                        `₹${Number(order.price).toLocaleString('en-IN', {
+                          minimumFractionDigits: 2,
+                        })}`
                       ) : (
-                        <span style={{ color: 'var(--muted-2)', fontStyle: 'italic', fontSize: '13px' }}>Pending Quote</span>
+                        <span className="italic text-slate-500 text-xs">Pending Quote</span>
                       )}
                     </span>
                   </div>
 
-                  <div className="card-metric-block">
-                    <span className="card-metric-label">Filament Used (+10% Misc)</span>
-                    <span className="card-metric-val weight" style={{ marginTop: '4px' }}>
+                  <div className="rounded-md bg-[#0a0f19] p-3">
+                    <span className="text-[10px] uppercase font-bold text-slate-500">
+                      Filament Used (+10%)
+                    </span>
+                    <span className="block text-xs font-mono font-semibold text-[#ff783b] mt-0.5">
                       {hasValidWeight ? (
                         <span>
                           {Math.round(weightNum * 1.1 * 10) / 10}g{' '}
-                          <span style={{ fontSize: '11px', color: 'var(--muted-2)', fontWeight: 'normal' }}>
-                            ({weightNum}g net + {Math.round(weightNum * 0.1 * 10) / 10}g misc)
+                          <span className="text-[10px] text-slate-500 font-normal">
+                            ({weightNum}g net)
                           </span>
                         </span>
                       ) : (
-                        <span style={{ color: 'var(--muted-2)', fontStyle: 'italic', fontSize: '13px' }}>Pending Weight</span>
+                        <span className="italic text-slate-500 text-xs">Pending Weight</span>
                       )}
                     </span>
                   </div>
 
-                  <div className="card-metric-block">
-                    <span className="card-metric-label">Current Pipeline Status</span>
-                    <span style={{ fontSize: '14px', fontWeight: 700, color: statusMeta.color, marginTop: '4px' }}>
+                  <div className="rounded-md bg-[#0a0f19] p-3">
+                    <span className="text-[10px] uppercase font-bold text-slate-500">
+                      Pipeline Status
+                    </span>
+                    <span
+                      className="block text-xs font-bold mt-0.5"
+                      style={{ color: statusMeta.color }}
+                    >
                       ● {statusMeta.label}
                     </span>
                   </div>
                 </div>
 
                 {order.description && (
-                  <div style={{ marginTop: '16px', paddingTop: '14px', borderTop: '1px solid var(--line-dim)' }}>
-                    <div className="card-metric-label">Order Notes / Description</div>
-                    <div style={{ fontSize: '13.5px', color: 'var(--text)', marginTop: '4px', background: 'var(--bg-deep)', padding: '10px 14px', borderRadius: 'var(--radius-sm)' }}>
+                  <div className="mt-3 pt-3 border-t border-slate-800">
+                    <span className="text-[10px] uppercase font-bold text-slate-500">
+                      Order Description / Notes
+                    </span>
+                    <p className="mt-1 text-xs text-slate-300 bg-[#0a0f19] p-2.5 rounded">
                       {order.description}
-                    </div>
+                    </p>
                   </div>
                 )}
               </div>
 
               {/* Paint & Finishing Specifications */}
-              <div className="form-card" style={{ padding: '20px' }}>
-                <h3 style={{ margin: '0 0 16px', fontSize: '15px', color: 'var(--text-bright)' }}>
+              <div className="rounded-lg border border-slate-800 bg-[#111726] p-4">
+                <h3 className="mb-3 text-sm font-semibold text-white">
                   Paint Colours &amp; Surface Specifications
                 </h3>
 
-                <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '16px' }}>
+                <div className="flex flex-wrap gap-2 mb-3">
                   {colors.length > 0 ? (
                     colors.map((c, i) => (
                       <ColorSwatch
@@ -292,35 +402,37 @@ export function OrderDetailModal({
                       )}
                     </>
                   ) : (
-                    <div style={{ color: 'var(--muted-2)', fontStyle: 'italic', fontSize: '13px' }}>
+                    <div className="text-xs italic text-slate-500">
                       Standard primer finish. No custom paint specified.
                     </div>
                   )}
                 </div>
 
-                <div className="form-grid-2" style={{ paddingTop: '14px', borderTop: '1px solid var(--line-dim)' }}>
+                <div className="grid grid-cols-2 gap-3 pt-3 border-t border-slate-800 text-xs">
                   <div>
-                    <span className="card-metric-label">Paint Chemistry</span>
-                    <div style={{ fontSize: '14px', color: 'var(--text-bright)', marginTop: '3px' }}>
+                    <span className="text-[10px] uppercase font-bold text-slate-500">
+                      Paint Chemistry
+                    </span>
+                    <div className="text-xs text-slate-300 mt-0.5">
                       {order.paint_type || 'Unspecified'}
                     </div>
                   </div>
                   <div>
-                    <span className="card-metric-label">Surface Finish</span>
-                    <div style={{ fontSize: '14px', color: 'var(--text-bright)', marginTop: '3px' }}>
+                    <span className="text-[10px] uppercase font-bold text-slate-500">
+                      Surface Finish
+                    </span>
+                    <div className="text-xs text-slate-300 mt-0.5">
                       {order.finish || 'Standard'}
                     </div>
                   </div>
                 </div>
 
                 {order.special_instructions && (
-                  <div style={{ marginTop: '14px', background: 'rgba(255, 94, 30, 0.08)', border: '1px solid rgba(255, 94, 30, 0.25)', padding: '10px 14px', borderRadius: 'var(--radius-sm)' }}>
-                    <div style={{ fontSize: '11px', fontFamily: 'var(--font-mono)', color: 'var(--accent)', fontWeight: 600 }}>
+                  <div className="mt-3 rounded border border-[#ff5e1e]/30 bg-[#ff5e1e]/10 p-2.5 text-xs text-slate-200">
+                    <div className="font-mono text-[10px] font-bold text-primary">
                       SPECIAL PAINTING INSTRUCTIONS
                     </div>
-                    <div style={{ fontSize: '13px', color: 'var(--text-bright)', marginTop: '3px' }}>
-                      {order.special_instructions}
-                    </div>
+                    <div className="mt-1">{order.special_instructions}</div>
                   </div>
                 )}
               </div>
@@ -329,24 +441,24 @@ export function OrderDetailModal({
 
           {/* TAB 2: PRODUCTION TRACKER */}
           {activeTab === 'status' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-              <div className="form-card" style={{ padding: '20px' }}>
-                <h3 style={{ margin: '0 0 16px', fontSize: '15px', color: 'var(--text-bright)' }}>
+            <div className="space-y-4">
+              <div className="rounded-lg border border-slate-800 bg-[#111726] p-4">
+                <h3 className="mb-3 text-sm font-semibold text-white">
                   Workflow Pipeline Progress
                 </h3>
                 <ProgressIndicator status={order.production_status} />
               </div>
 
-              <div className="form-card" style={{ padding: '20px' }}>
-                <h3 style={{ margin: '0 0 6px', fontSize: '15px', color: 'var(--text-bright)' }}>
-                  Advance / Shift Production Stage
+              <div className="rounded-lg border border-slate-800 bg-[#111726] p-4">
+                <h3 className="text-sm font-semibold text-white">
+                  Shift Production List / Stage
                 </h3>
-                <p style={{ margin: '0 0 16px', fontSize: '12.5px', color: 'var(--muted)' }}>
-                  Selecting a stage updates live workshop telemetry, moves the order in the Kanban queue, and records a verified change entry.
+                <p className="mt-0.5 mb-3 text-xs text-slate-400">
+                  Select a destination list to immediately move this order.
                 </p>
 
-                <form onSubmit={handleUpdateStatusSubmit}>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '10px', marginBottom: '16px' }}>
+                <form onSubmit={handleUpdateStatusSubmit} className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     {PRODUCTION_STATUSES.map((s) => {
                       const isSelected = selectedStatus === s.id
                       return (
@@ -354,25 +466,21 @@ export function OrderDetailModal({
                           key={s.id}
                           type="button"
                           onClick={() => setSelectedStatus(s.id)}
-                          style={{
-                            display: 'flex',
-                            alignItems: 'flex-start',
-                            gap: '10px',
-                            padding: '12px 14px',
-                            borderRadius: 'var(--radius-sm)',
-                            background: isSelected ? 'var(--panel-elevated)' : 'var(--bg-deep)',
-                            border: `1px solid ${isSelected ? s.color : 'var(--line)'}`,
-                            boxShadow: isSelected ? `0 0 15px ${s.color}33` : 'none',
-                            textAlign: 'left',
-                            transition: 'all 0.15s ease',
-                          }}
+                          className={`flex items-start gap-2.5 rounded-lg border p-3 text-left transition-all ${
+                            isSelected
+                              ? 'border-primary bg-primary/10 ring-1 ring-primary'
+                              : 'border-slate-800 bg-[#0a0f19] hover:border-slate-700'
+                          }`}
                         >
-                          <span style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: s.color, marginTop: '4px', flexShrink: 0 }} />
+                          <span
+                            className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full"
+                            style={{ backgroundColor: s.color }}
+                          />
                           <div>
-                            <div style={{ fontWeight: 600, fontSize: '13px', color: isSelected ? 'var(--text-bright)' : 'var(--text)' }}>
+                            <div className="text-xs font-semibold text-white">
                               {s.label}
                             </div>
-                            <div style={{ fontSize: '11px', color: 'var(--muted-2)', marginTop: '2px' }}>
+                            <div className="text-[10.5px] text-slate-400 line-clamp-1">
                               {s.desc}
                             </div>
                           </div>
@@ -381,25 +489,33 @@ export function OrderDetailModal({
                     })}
                   </div>
 
-                  <div className="form-group" style={{ marginBottom: '16px' }}>
-                    <label className="form-label" htmlFor="status-note-input">
+                  <div className="space-y-1.5">
+                    <label
+                      htmlFor="status-note-input"
+                      className="text-xs font-medium text-slate-300"
+                    >
                       Operator Note / Rationale (Optional)
                     </label>
-                    <input
+                    <Input
                       id="status-note-input"
                       value={statusNote}
                       onChange={(e) => setStatusNote(e.target.value)}
-                      placeholder="e.g. Completed surface priming; transferred to main paint booth"
+                      placeholder="e.g. Priming complete; moved to paint booth"
+                      className="text-xs"
                     />
                   </div>
 
-                  <button
+                  <Button
                     type="submit"
-                    className="btn-primary"
-                    disabled={selectedStatus === order.production_status && !statusNote.trim()}
+                    variant="default"
+                    size="sm"
+                    disabled={
+                      selectedStatus === order.production_status && !statusNote.trim()
+                    }
+                    className="w-full sm:w-auto"
                   >
                     Confirm Stage Update →
-                  </button>
+                  </Button>
                 </form>
               </div>
             </div>
@@ -407,63 +523,62 @@ export function OrderDetailModal({
 
           {/* TAB 3: ACTIVITY HISTORY */}
           {activeTab === 'history' && (
-            <div className="form-card" style={{ padding: '20px' }}>
-              <h3 style={{ margin: '0 0 6px', fontSize: '15px', color: 'var(--text-bright)' }}>
+            <div className="rounded-lg border border-slate-800 bg-[#111726] p-4">
+              <h3 className="text-sm font-semibold text-white">
                 Accountability &amp; Activity Log
               </h3>
-              <p style={{ margin: '0 0 16px', fontSize: '12.5px', color: 'var(--muted)' }}>
-                Audit trail of changes made to this order by studio operators.
+              <p className="mt-0.5 mb-3 text-xs text-slate-400">
+                Audit trail of changes made to this order.
               </p>
 
               {loadingHistory ? (
-                <div style={{ padding: '30px', textAlign: 'center', color: 'var(--muted)' }}>
-                  Loading history…
+                <div className="space-y-2 py-2">
+                  <Skeleton className="h-16 w-full" />
+                  <Skeleton className="h-16 w-full" />
+                  <Skeleton className="h-16 w-full" />
                 </div>
               ) : history.length === 0 ? (
-                <div style={{ padding: '30px', textAlign: 'center', color: 'var(--muted-2)' }}>
+                <div className="py-8 text-center text-xs text-slate-500">
                   No logged changes yet for this order.
                 </div>
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div className="space-y-2">
                   {history.map((h) => (
-                    <div
-                      key={h.id}
-                      style={{
-                        padding: '12px 16px',
-                        background: 'var(--bg-deep)',
-                        border: '1px solid var(--line)',
-                        borderRadius: 'var(--radius-sm)',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: '4px',
-                      }}
-                    >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <strong style={{ fontSize: '13px', color: 'var(--accent)' }}>
-                          {h.field_changed === 'production_status'
-                            ? 'Production Status Changed'
-                            : `Updated ${h.field_changed}`}
-                        </strong>
-                        <span style={{ fontSize: '11px', color: 'var(--muted-2)', fontFamily: 'var(--font-mono)' }}>
-                          {formatDateTime(h.created_at)}
-                        </span>
-                      </div>
-
-                      <div style={{ fontSize: '12.5px', color: 'var(--text)' }}>
-                        {h.old_value && <span style={{ color: 'var(--muted)' }}>From: <em>{h.old_value}</em> → </span>}
-                        <span>To: <strong style={{ color: 'var(--text-bright)' }}>{h.new_value}</strong></span>
-                      </div>
-
-                      {h.notes && (
-                        <div style={{ fontSize: '12px', color: 'var(--teal)', fontStyle: 'italic', marginTop: '2px' }}>
-                          "{h.notes}"
+                    <Item key={h.id} className="bg-[#0a0f19] border-slate-800">
+                      <ItemMedia className="text-primary bg-primary/10 border-primary/20 shrink-0">
+                        <History className="h-4 w-4" />
+                      </ItemMedia>
+                      <ItemContent>
+                        <div className="flex items-center justify-between">
+                          <ItemTitle className="text-primary font-semibold text-xs">
+                            {h.field_changed === 'production_status'
+                              ? 'Production Status Changed'
+                              : `Updated ${h.field_changed}`}
+                          </ItemTitle>
+                          <span className="font-mono text-[10px] text-slate-500">
+                            {formatDateTime(h.created_at)}
+                          </span>
                         </div>
-                      )}
-
-                      <div style={{ fontSize: '11px', color: 'var(--muted-2)', marginTop: '2px' }}>
-                        Operator: <strong style={{ color: 'var(--text)' }}>{h.changed_by || 'Studio Operator'}</strong>
-                      </div>
-                    </div>
+                        <ItemDescription className="text-slate-300">
+                          {h.old_value && (
+                            <span className="text-slate-500">
+                              From: <em>{h.old_value}</em> →{' '}
+                            </span>
+                          )}
+                          <span>
+                            To: <strong className="text-white">{h.new_value}</strong>
+                          </span>
+                        </ItemDescription>
+                        {h.notes && (
+                          <div className="text-[11px] text-[#05d5b3] italic pt-0.5">
+                            "{h.notes}"
+                          </div>
+                        )}
+                        <div className="text-[10px] text-slate-500 pt-0.5">
+                          Operator: <span className="text-slate-400">{h.changed_by || 'Operator'}</span>
+                        </div>
+                      </ItemContent>
+                    </Item>
                   ))}
                 </div>
               )}
@@ -472,115 +587,97 @@ export function OrderDetailModal({
 
           {/* TAB 4: FILES & PHOTOS */}
           {activeTab === 'files' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            <div className="space-y-4">
               {/* Photos Gallery */}
-              <div className="form-card" style={{ padding: '20px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                  <h3 style={{ margin: 0, fontSize: '15px', color: 'var(--text-bright)' }}>
-                    Finished Product Documentation Photos ({photos.length})
+              <div className="rounded-lg border border-slate-800 bg-[#111726] p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-sm font-semibold text-white">
+                    Product Photos ({photos.length})
                   </h3>
-                  <button
-                    type="button"
-                    style={{ fontSize: '12.5px', color: 'var(--accent)', fontWeight: 600 }}
+                  <Button
+                    variant="ghost"
+                    size="xs"
+                    className="h-7 text-xs text-primary"
                     onClick={() => {
                       onClose()
                       onEditOrder(order)
                     }}
                   >
-                    ✏️ Upload / Edit Photos
-                  </button>
+                    <Pencil className="mr-1 h-3 w-3" /> Edit Photos
+                  </Button>
                 </div>
 
                 {photos.length > 0 ? (
                   <div>
-                    <div style={{ width: '100%', maxHeight: '380px', borderRadius: 'var(--radius-md)', overflow: 'hidden', background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '12px' }}>
+                    <div className="flex max-h-[320px] w-full items-center justify-center overflow-hidden rounded-lg bg-black mb-2">
                       <img
                         src={activePhoto || photos[0]}
                         alt={order.item}
-                        style={{ maxWidth: '100%', maxHeight: '380px', objectFit: 'contain' }}
+                        className="max-h-[320px] max-w-full object-contain"
                       />
                     </div>
                     {photos.length > 1 && (
-                      <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '6px' }}>
+                      <div className="flex gap-2 overflow-x-auto pb-1">
                         {photos.map((u, i) => (
                           <button
                             key={i}
                             type="button"
                             onClick={() => setActivePhoto(u)}
-                            style={{
-                              width: '60px',
-                              height: '60px',
-                              borderRadius: 'var(--radius-sm)',
-                              overflow: 'hidden',
-                              border: `2px solid ${activePhoto === u ? 'var(--accent)' : 'transparent'}`,
-                              flexShrink: 0,
-                            }}
+                            className={`h-14 w-14 shrink-0 overflow-hidden rounded border-2 transition-all ${
+                              activePhoto === u
+                                ? 'border-primary ring-1 ring-primary'
+                                : 'border-transparent opacity-70 hover:opacity-100'
+                            }`}
                           >
-                            <img src={u} alt="thumb" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            <img
+                              src={u}
+                              alt="thumb"
+                              className="h-full w-full object-cover"
+                            />
                           </button>
                         ))}
                       </div>
                     )}
                   </div>
                 ) : (
-                  <div style={{ padding: '30px', textAlign: 'center', color: 'var(--muted-2)' }}>
-                    No finished product photos attached.
+                  <div className="py-8 text-center text-xs text-slate-500">
+                    No product photos attached.
                   </div>
                 )}
               </div>
 
               {/* 3D CAD Models */}
-              <div className="form-card" style={{ padding: '20px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                  <h3 style={{ margin: 0, fontSize: '15px', color: 'var(--text-bright)' }}>
+              <div className="rounded-lg border border-slate-800 bg-[#111726] p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-sm font-semibold text-white">
                     3D CAD &amp; Slicer Model Files ({modelFiles.length})
                   </h3>
-                  <button
-                    type="button"
-                    style={{ fontSize: '12.5px', color: 'var(--cyan)', fontWeight: 600 }}
+                  <Button
+                    variant="ghost"
+                    size="xs"
+                    className="h-7 text-xs text-cyan"
                     onClick={() => {
                       onClose()
                       onEditOrder(order)
                     }}
                   >
-                    📁 Manage 3D Files
-                  </button>
+                    <Box className="mr-1 h-3 w-3" /> Manage Files
+                  </Button>
                 </div>
 
                 {modelFiles.length > 0 ? (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div className="space-y-2">
                     {modelFiles.map((m, i) => (
-                      <div
+                      <AttachmentItem
                         key={i}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          padding: '10px 14px',
-                          background: 'var(--bg-deep)',
-                          border: '1px solid var(--line)',
-                          borderRadius: 'var(--radius-sm)',
-                        }}
-                      >
-                        <span style={{ fontSize: '13.5px', color: 'var(--text-bright)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <span>🧊</span> {m.name}
-                        </span>
-                        {m.url && (
-                          <a
-                            href={m.url}
-                            target="_blank"
-                            rel="noreferrer noopener"
-                            className="btn-inspect"
-                            style={{ padding: '4px 10px', fontSize: '12px' }}
-                          >
-                            Download / View ↗
-                          </a>
-                        )}
-                      </div>
+                        name={m.name}
+                        size={m.size}
+                        type="model"
+                      />
                     ))}
                   </div>
                 ) : (
-                  <div style={{ padding: '30px', textAlign: 'center', color: 'var(--muted-2)' }}>
+                  <div className="py-8 text-center text-xs text-slate-500">
                     No 3D CAD models attached.
                   </div>
                 )}
@@ -588,34 +685,48 @@ export function OrderDetailModal({
             </div>
           )}
         </div>
+      </Tabs>
 
-        {/* Guaranteed Sticky Action Footer */}
-        <div className="sheet-foot">
-          <button
+        {/* Action Footer */}
+        <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-800 bg-[#090d16] p-3 sm:p-4">
+          <Button
             type="button"
-            className="del-btn"
+            variant="ghost"
+            size="sm"
+            className="text-xs text-destructive hover:bg-destructive/15"
             onClick={() => {
-              if (window.confirm(`Permanently remove order for "${order.item}" from the studio ledger?`)) {
+              if (
+                window.confirm(
+                  `Permanently remove order for "${order.item}" from the studio ledger?`
+                )
+              ) {
                 onRemoveOrder(order)
               }
             }}
           >
-            🗑️ Delete Order
-          </button>
-          <button
-            type="button"
-            className="btn-secondary"
-            onClick={onClose}
-          >
-            Close
-          </button>
-          <button
-            type="button"
-            className="btn-primary"
-            onClick={() => onEditOrder(order)}
-          >
-            ✏️ Edit Order Specifications
-          </button>
+            <Trash2 className="mr-1 h-3.5 w-3.5" /> Delete Order
+          </Button>
+
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="text-xs"
+              onClick={onClose}
+            >
+              Close
+            </Button>
+            <Button
+              type="button"
+              variant="default"
+              size="sm"
+              className="text-xs"
+              onClick={() => onEditOrder(order)}
+            >
+              <Pencil className="mr-1 h-3.5 w-3.5" /> Edit Specs
+            </Button>
+          </div>
         </div>
       </div>
     </div>

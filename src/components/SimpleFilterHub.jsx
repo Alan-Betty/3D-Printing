@@ -1,10 +1,33 @@
-import { useRef, useEffect } from 'react'
+import React, { useRef, useEffect } from 'react'
+import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
+import { ButtonGroup } from '@/components/ui/button-group'
+import { Badge } from '@/components/ui/badge'
+import { InputGroup, InputLeftElement, InputRightElement } from '@/components/ui/input-group'
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
+import { Toggle } from '@/components/ui/toggle'
+import { Separator } from '@/components/ui/separator'
+import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+  TooltipProvider,
+} from '@/components/ui/tooltip'
+import {
+  Search,
+  X,
+  AlertTriangle,
+  Zap,
+  Clock,
+  Table as TableIcon,
+  LayoutGrid,
+  Kanban,
+  RotateCcw,
+} from 'lucide-react'
 
 /**
  * Enhanced Control Center & Operational Filter Hub
- * Provides quick omni-search with keyboard shortcut ('/'),
- * urgent action chips (Overdue, Express, Due Soon),
- * tactile view mode switcher, and interactive pipeline stage tabs.
+ * Built with shadcn components and responsive mobile design.
  */
 export function SimpleFilterHub({
   viewMode,
@@ -69,178 +92,273 @@ export function SimpleFilterHub({
   }
 
   return (
-    <div className="simple-hub" role="search" aria-label="Studio order control center">
+    <div
+      className="mb-5 flex flex-col gap-3 rounded-xl border border-slate-800 bg-[#0d131f] p-3 sm:p-4 shadow-lg"
+      role="search"
+      aria-label="Studio order control center"
+    >
       {/* Top Row: Omni Search + Urgent Action Chips + View Switcher */}
-      <div className="hub-top-row">
-        <div className="hub-search-wrap">
-          <span className="hub-search-icon" aria-hidden="true">🔍</span>
-          <input
-            ref={searchInputRef}
-            type="text"
-            className="hub-search-input"
-            value={filters.query}
-            onChange={handleQueryChange}
-            placeholder="Search orders by item, customer, phone, or color... (Press /)"
-            aria-label="Search orders"
-          />
-          {filters.query && (
-            <button
-              type="button"
-              className="hub-clear-search-btn"
-              onClick={() => onFilterChange({ query: '' })}
-              aria-label="Clear search"
-              title="Clear search"
-            >
-              ✕
-            </button>
-          )}
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        {/* Search Bar with InputGroup */}
+        <div className="flex-1">
+          <InputGroup>
+            <InputLeftElement>
+              <Search className="h-4 w-4 text-slate-400" />
+            </InputLeftElement>
+            <Input
+              ref={searchInputRef}
+              type="text"
+              value={filters.query}
+              onChange={handleQueryChange}
+              placeholder="Search orders by item, customer, phone, color... (Press /)"
+              className="pl-9 pr-8 h-9 border-slate-700/80 bg-[#121929] text-xs text-white placeholder:text-slate-500 focus-visible:ring-primary"
+              aria-label="Search orders"
+            />
+            {filters.query && (
+              <InputRightElement>
+                <button
+                  type="button"
+                  onClick={() => onFilterChange({ query: '' })}
+                  className="text-slate-400 hover:text-white transition-colors"
+                  aria-label="Clear search"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </InputRightElement>
+            )}
+          </InputGroup>
         </div>
 
-        <div className="hub-quick-actions">
-          {/* Overdue Alert Chip */}
-          {stats?.overdue > 0 && (
-            <button
-              type="button"
-              className={`hub-chip urgent-overdue pulse ${filters.timeframe === 'overdue' ? 'active' : ''}`}
-              onClick={toggleOverdue}
-              title="Show overdue orders requiring immediate attention"
-            >
-              <span>⚠️</span>
-              <span>{stats.overdue} Overdue</span>
-            </button>
-          )}
+        {/* Chips and View Switcher */}
+        <div className="flex flex-wrap items-center gap-2">
+          <TooltipProvider>
+            {/* Overdue Alert Chip */}
+            {stats?.overdue > 0 && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Toggle
+                    pressed={filters.timeframe === 'overdue'}
+                    onPressedChange={toggleOverdue}
+                    size="sm"
+                    className={`gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-semibold ${
+                      filters.timeframe === 'overdue'
+                        ? 'border-destructive bg-destructive/25 text-white ring-1 ring-destructive/40'
+                        : 'border-destructive/40 bg-destructive/10 text-destructive hover:bg-destructive/20'
+                    }`}
+                  >
+                    <AlertTriangle className="h-3.5 w-3.5 animate-pulse text-destructive" />
+                    <span>{stats.overdue} Overdue</span>
+                  </Toggle>
+                </TooltipTrigger>
+                <TooltipContent>Filter orders past deadline</TooltipContent>
+              </Tooltip>
+            )}
 
-          {/* Express Queue Chip */}
-          <button
-            type="button"
-            className={`hub-chip express-chip ${filters.priority === 'express' ? 'active' : ''}`}
-            onClick={togglePriority}
-            title="Filter by Express queue"
-          >
-            <span>⚡ Express ({stats?.express || 0})</span>
-          </button>
+            {/* Express Queue Chip */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Toggle
+                  pressed={filters.priority === 'express'}
+                  onPressedChange={togglePriority}
+                  size="sm"
+                  className={`gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-semibold ${
+                    filters.priority === 'express'
+                      ? 'border-[#ff5e1e] bg-[#ff5e1e]/25 text-white ring-1 ring-[#ff5e1e]/40'
+                      : 'border-[#ff5e1e]/40 bg-[#ff5e1e]/10 text-[#ff783b] hover:bg-[#ff5e1e]/20'
+                  }`}
+                >
+                  <Zap className="h-3.5 w-3.5" />
+                  <span>Express ({stats?.express || 0})</span>
+                </Toggle>
+              </TooltipTrigger>
+              <TooltipContent>Filter by Express high-priority queue</TooltipContent>
+            </Tooltip>
 
-          {/* Due Soon Chip */}
-          {stats?.dueWithin3Days > 0 && (
-            <button
-              type="button"
-              className={`hub-chip ${filters.timeframe === 'due_in_3_days' ? 'active' : ''}`}
-              onClick={toggleDueSoon}
-              title="Filter orders due within next 3 days"
-            >
-              <span>⏳ Next 3 Days ({stats.dueWithin3Days})</span>
-            </button>
-          )}
+            {/* Due Soon Chip */}
+            {stats?.dueWithin3Days > 0 && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Toggle
+                    pressed={filters.timeframe === 'due_in_3_days'}
+                    onPressedChange={toggleDueSoon}
+                    size="sm"
+                    className={`gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium ${
+                      filters.timeframe === 'due_in_3_days'
+                        ? 'border-amber bg-amber/25 text-white ring-1 ring-amber/40'
+                        : 'border-amber/40 bg-amber/10 text-amber hover:bg-amber/20'
+                    }`}
+                  >
+                    <Clock className="h-3.5 w-3.5" />
+                    <span>Next 3 Days ({stats.dueWithin3Days})</span>
+                  </Toggle>
+                </TooltipTrigger>
+                <TooltipContent>Orders due within 3 days</TooltipContent>
+              </Tooltip>
+            )}
 
-          {/* View Mode Segmented Control */}
-          <div className="hub-view-switcher" role="radiogroup" aria-label="Display view mode">
-            <button
-              type="button"
-              role="radio"
-              aria-checked={viewMode === 'table'}
-              className={`hub-view-btn ${viewMode === 'table' ? 'active' : ''}`}
-              onClick={() => onViewModeChange('table')}
-              title="Dense Data Grid View"
-            >
-              <span>▦</span> Table
-            </button>
-            <button
-              type="button"
-              role="radio"
-              aria-checked={viewMode === 'card'}
-              className={`hub-view-btn ${viewMode === 'card' ? 'active' : ''}`}
-              onClick={() => onViewModeChange('card')}
-              title="Visual Card Grid View"
-            >
-              <span>🪟</span> Cards
-            </button>
-            <button
-              type="button"
-              role="radio"
-              aria-checked={viewMode === 'kanban'}
-              className={`hub-view-btn ${viewMode === 'kanban' ? 'active' : ''}`}
-              onClick={() => {
-                onViewModeChange('kanban')
-                if (filters.status !== 'all') {
-                  onFilterChange({ status: 'all' })
-                }
-              }}
-              title="Production Kanban Board"
-            >
-              <span>📋</span> Board
-            </button>
-          </div>
+            {/* View Mode Segmented Control using ToggleGroup */}
+            <div className="rounded-lg border border-slate-700/80 bg-[#121929] p-0.5">
+              <ToggleGroup
+                type="single"
+                value={viewMode}
+                onValueChange={(val) => {
+                  if (val) {
+                    onViewModeChange(val)
+                    if (val === 'kanban' && filters.status !== 'all') {
+                      onFilterChange({ status: 'all' })
+                    }
+                  }
+                }}
+                className="gap-0.5"
+              >
+                <ToggleGroupItem
+                  value="kanban"
+                  size="sm"
+                  className="h-7 px-2.5 text-xs gap-1.5 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground text-slate-400 hover:text-white"
+                  title="Kanban Board View"
+                >
+                  <Kanban className="h-3.5 w-3.5" />
+                  <span>Board</span>
+                </ToggleGroupItem>
+                <ToggleGroupItem
+                  value="card"
+                  size="sm"
+                  className="h-7 px-2.5 text-xs gap-1.5 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground text-slate-400 hover:text-white"
+                  title="Card Grid View"
+                >
+                  <LayoutGrid className="h-3.5 w-3.5" />
+                  <span>Cards</span>
+                </ToggleGroupItem>
+                <ToggleGroupItem
+                  value="table"
+                  size="sm"
+                  className="h-7 px-2.5 text-xs gap-1.5 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground text-slate-400 hover:text-white"
+                  title="Dense Table View"
+                >
+                  <TableIcon className="h-3.5 w-3.5" />
+                  <span>Table</span>
+                </ToggleGroupItem>
+              </ToggleGroup>
+            </div>
+          </TooltipProvider>
         </div>
       </div>
 
+      <Separator className="bg-slate-800/80 my-0.5" />
+
       {/* Bottom Row: Pipeline Status Stepper Tabs with live count tags */}
-      <div className="hub-bottom-row">
-        <nav className="hub-pipeline-tabs" aria-label="Production pipeline filter tabs">
+      <div className="flex flex-col gap-2.5 pt-2 border-t border-slate-800/80 sm:flex-row sm:items-center sm:justify-between">
+        <nav
+          className="flex items-center gap-1 overflow-x-auto pb-1 scrollbar-none"
+          aria-label="Production pipeline filter tabs"
+        >
           <button
             type="button"
-            className={`hub-tab ${filters.status === 'all' ? 'active' : ''}`}
+            className={`flex items-center gap-1.5 whitespace-nowrap rounded-lg px-2.5 py-1 text-xs font-medium transition-all ${
+              filters.status === 'all'
+                ? 'bg-[#1e293b] text-white shadow'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
+            }`}
             onClick={() => handleStatusTab('all')}
           >
-            All Active <span className="hub-tab-count">{stats?.totalActive ?? totalCount}</span>
+            <span>All Active</span>
+            <span className="rounded-full bg-slate-800 px-1.5 py-0.2 text-[10px] text-slate-300">
+              {stats?.totalActive ?? totalCount}
+            </span>
           </button>
 
           <button
             type="button"
-            className={`hub-tab ${filters.status === 'order_received' ? 'active' : ''}`}
+            className={`flex items-center gap-1.5 whitespace-nowrap rounded-lg px-2.5 py-1 text-xs font-medium transition-all ${
+              filters.status === 'order_received'
+                ? 'bg-[#1e293b] text-white shadow'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
+            }`}
             onClick={() => handleStatusTab('order_received')}
           >
-            Awaiting Print <span className="hub-tab-count">{stats?.awaitingPrint || 0}</span>
+            <span>Awaiting Print</span>
+            <span className="rounded-full bg-slate-800 px-1.5 py-0.2 text-[10px] text-slate-300">
+              {stats?.awaitingPrint || 0}
+            </span>
           </button>
 
           <button
             type="button"
-            className={`hub-tab ${filters.status === 'painting_in_progress' ? 'active' : ''}`}
+            className={`flex items-center gap-1.5 whitespace-nowrap rounded-lg px-2.5 py-1 text-xs font-medium transition-all ${
+              filters.status === 'painting_in_progress'
+                ? 'bg-[#1e293b] text-white shadow'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
+            }`}
             onClick={() => handleStatusTab('painting_in_progress')}
           >
-            Painting <span className="hub-tab-count">{stats?.paintingInProgress || 0}</span>
+            <span>Painting</span>
+            <span className="rounded-full bg-slate-800 px-1.5 py-0.2 text-[10px] text-slate-300">
+              {stats?.paintingInProgress || 0}
+            </span>
           </button>
 
           <button
             type="button"
-            className={`hub-tab ${filters.status === 'ready_for_delivery' ? 'active' : ''}`}
+            className={`flex items-center gap-1.5 whitespace-nowrap rounded-lg px-2.5 py-1 text-xs font-medium transition-all ${
+              filters.status === 'ready_for_delivery'
+                ? 'bg-[#1e293b] text-white shadow'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
+            }`}
             onClick={() => handleStatusTab('ready_for_delivery')}
           >
-            Ready for Delivery <span className="hub-tab-count">{stats?.readyForDelivery || 0}</span>
+            <span>Ready for Delivery</span>
+            <span className="rounded-full bg-slate-800 px-1.5 py-0.2 text-[10px] text-slate-300">
+              {stats?.readyForDelivery || 0}
+            </span>
           </button>
 
           <button
             type="button"
-            className={`hub-tab ${filters.status === 'delivered_completed' ? 'active' : ''}`}
+            className={`flex items-center gap-1.5 whitespace-nowrap rounded-lg px-2.5 py-1 text-xs font-medium transition-all ${
+              filters.status === 'delivered_completed'
+                ? 'bg-[#1e293b] text-white shadow'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
+            }`}
             onClick={() => handleStatusTab('delivered_completed')}
           >
-            Completed <span className="hub-tab-count">{stats?.completed || 0}</span>
+            <span>Completed</span>
+            <span className="rounded-full bg-slate-800 px-1.5 py-0.2 text-[10px] text-slate-300">
+              {stats?.completed || 0}
+            </span>
           </button>
         </nav>
 
-        {/* Status Meta Info / Clear Filters */}
-        <div className="hub-meta-info">
+        {/* Telemetry info and Clear Filters button */}
+        <div className="flex items-center justify-between sm:justify-end gap-3 text-xs">
           {filamentMetrics && (
             <span
-              title={`Net filament: ${filamentMetrics.netGrams}g + 10% misc overhead (${filamentMetrics.miscGrams}g) across ${filamentMetrics.printCountWithWeight} weighted prints`}
-              style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', color: 'var(--accent)', fontWeight: 600, fontFamily: 'var(--font-mono)' }}
+              title={`Net filament: ${filamentMetrics.netGrams}g + 10% misc overhead (${filamentMetrics.miscGrams}g)`}
+              className="font-mono text-[11px] font-semibold text-[#ff783b]"
             >
-              <span>🧵</span> {filamentMetrics.totalGrams}g <span style={{ opacity: 0.65, fontSize: '11px' }}>(+10%)</span>
+              🧵 {filamentMetrics.totalGrams}g <span className="opacity-60 text-[10px]">(+10%)</span>
             </span>
           )}
 
           {isFiltered && (
-            <button
-              type="button"
-              className="hub-reset-btn"
-              onClick={onResetFilters}
-              title="Reset all active filters"
-            >
-              ✕ Clear Filters
-            </button>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="xs"
+                    onClick={onResetFilters}
+                    className="h-7 text-xs text-slate-400 hover:text-white"
+                  >
+                    <RotateCcw className="mr-1 h-3 w-3" /> Clear
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Reset all active filters and search</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           )}
 
-          <span style={{ fontSize: '12px' }}>
-            Showing <strong style={{ color: 'var(--text-bright)' }}>{filteredCount}</strong> of {totalCount}
+          <span className="text-slate-400 text-[11px]">
+            Showing <strong className="text-white">{filteredCount}</strong> of {totalCount}
           </span>
         </div>
       </div>

@@ -1,7 +1,29 @@
-import { useState, useRef, useEffect } from 'react'
-import { PRIORITIES, PAINT_FINISHES, PAINT_TYPES, STATUS_LOOKUP } from '../constants/production'
+import React, { useState, useRef, useEffect } from 'react'
+import {
+  PRIORITIES,
+  PAINT_FINISHES,
+  PAINT_TYPES,
+  STATUS_LOOKUP,
+} from '../constants/production'
 import { ColorSelector } from './ColorSelector'
 import { supabase, isConfigured, BUCKET } from '../supabase'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { DatePicker } from '@/components/ui/date-picker'
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Switch } from '@/components/ui/switch'
+import { Slider } from '@/components/ui/slider'
+import { Separator } from '@/components/ui/separator'
+import { InputGroup, InputLeftAddon, InputRightAddon } from '@/components/ui/input-group'
+import { Field, FieldLabel, FieldDescription, FieldError } from '@/components/ui/field'
+import { Attachment, AttachmentList, AttachmentItem, AttachmentUpload } from '@/components/ui/attachment'
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select'
+import { Spinner } from '@/components/ui/spinner'
+import { X, Sparkles, Plus, Trash2, Upload, FileText, Check } from 'lucide-react'
 
 const sanitize = (name) => name.replace(/[^\w.\-]+/g, '_')
 const MODEL_EXT = '.stl,.3mf,.obj,.gcode,.step,.stp,.zip'
@@ -20,12 +42,8 @@ export function EditOrderModal({ order, onClose, onSave, onDeleteOrder }) {
   const [weightG, setWeightG] = useState(
     order.weight_g != null && Number(order.weight_g) > 0 ? String(order.weight_g) : ''
   )
-
-  const isPrintingOrBeyond =
-    order.production_status !== 'order_received' &&
-    order.production_status !== 'cancelled' &&
-    order.production_status !== 'on_hold' &&
-    (STATUS_LOOKUP[order.production_status]?.step ?? 0) >= 1
+  const [infill, setInfill] = useState([order.infill || 20])
+  const [primerRequired, setPrimerRequired] = useState(order.primer_coat || false)
 
   // Color fields
   const [primaryName, setPrimaryName] = useState(order.primary_color || '')
@@ -34,7 +52,9 @@ export function EditOrderModal({ order, onClose, onSave, onDeleteOrder }) {
   const [secondaryCode, setSecondaryCode] = useState(order.secondary_color_code || '')
   const [paintType, setPaintType] = useState(order.paint_type || 'Acrylic')
   const [finish, setFinish] = useState(order.finish || 'Satin')
-  const [specialInstructions, setSpecialInstructions] = useState(order.special_instructions || '')
+  const [specialInstructions, setSpecialInstructions] = useState(
+    order.special_instructions || ''
+  )
   const [colorNotes, setColorNotes] = useState(order.color_notes || '')
 
   // Multi-color dynamic array (accents)
@@ -49,7 +69,11 @@ export function EditOrderModal({ order, onClose, onSave, onDeleteOrder }) {
     const urls = order.imageUrls || []
     return paths.map((path, idx) => ({
       path,
-      url: urls[idx] || (path.startsWith('http') || path.startsWith('blob:') ? path : `/storage/sales/${path}`),
+      url:
+        urls[idx] ||
+        (path.startsWith('http') || path.startsWith('blob:')
+          ? path
+          : `/storage/sales/${path}`),
     }))
   })
 
@@ -87,7 +111,14 @@ export function EditOrderModal({ order, onClose, onSave, onDeleteOrder }) {
   const handleAddExtraColor = () => {
     setExtraColors((prev) => [
       ...prev,
-      { role: `Accent #${prev.length + 1}`, name: '', code: '', paint_type: paintType, finish, notes: '' },
+      {
+        role: `Accent #${prev.length + 1}`,
+        name: '',
+        code: '',
+        paint_type: paintType,
+        finish,
+        notes: '',
+      },
     ])
   }
 
@@ -152,7 +183,9 @@ export function EditOrderModal({ order, onClose, onSave, onDeleteOrder }) {
           const item = newPhotoFiles[i]
           if (isConfigured) {
             const path = `${order.id}/img_${Date.now()}_${i}_${sanitize(item.name)}`
-            const { error } = await supabase.storage.from(BUCKET).upload(path, item.file)
+            const { error } = await supabase.storage
+              .from(BUCKET)
+              .upload(path, item.file)
             if (error) throw error
             uploadedImagePaths.push(path)
           } else {
@@ -169,7 +202,9 @@ export function EditOrderModal({ order, onClose, onSave, onDeleteOrder }) {
           const item = newModelFiles[i]
           if (isConfigured) {
             const path = `${order.id}/model_${Date.now()}_${i}_${sanitize(item.name)}`
-            const { error } = await supabase.storage.from(BUCKET).upload(path, item.file)
+            const { error } = await supabase.storage
+              .from(BUCKET)
+              .upload(path, item.file)
             if (error) throw error
             uploadedModelMetas.push({ path, name: item.name })
           } else {
@@ -265,172 +300,233 @@ export function EditOrderModal({ order, onClose, onSave, onDeleteOrder }) {
   const hasValidWeight = !Number.isNaN(weightNum) && weightNum > 0
 
   return (
-    <div className="scrim" onClick={onClose}>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-3 sm:p-6 backdrop-blur-sm animate-in fade-in-50"
+      onClick={onClose}
+    >
       <div
-        className="sheet sheet-wide"
+        className="relative flex w-full max-w-3xl flex-col max-h-[92vh] overflow-hidden rounded-xl border border-slate-800 bg-[#0d131f] shadow-2xl animate-in zoom-in-95"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
         aria-labelledby="edit-order-title"
       >
-        {/* Fixed Header */}
-        <div className="sheet-head">
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-slate-800 bg-[#090d16] p-4 sm:p-5">
+          <div>
+            <div className="font-mono text-xs text-cyan">
+              Editing #{order.id.slice(0, 8)}
+            </div>
+            <h2
+              id="edit-order-title"
+              className="text-lg sm:text-xl font-bold text-white tracking-tight"
+            >
+              Edit Order Specifications &amp; Files
+            </h2>
+          </div>
           <button
             type="button"
-            className="sheet-x"
+            className="rounded-sm p-1 text-slate-400 hover:text-white"
             onClick={onClose}
             aria-label="Close modal"
           >
-            ✕
+            <X className="h-5 w-5" />
           </button>
-          <div style={{ fontSize: '11px', fontFamily: 'var(--font-mono)', color: 'var(--cyan)' }}>
-            Editing #{order.id}
-          </div>
-          <h2 id="edit-order-title" className="sheet-title">
-            Edit Order Specifications &amp; Files
-          </h2>
         </div>
 
-        {/* Scrollable Form Body */}
-        <form onSubmit={handleSubmit} id="edit-order-form" style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
-          <div className="sheet-body">
+        {/* Form Body */}
+        <form
+          onSubmit={handleSubmit}
+          id="edit-order-form"
+          className="flex flex-1 flex-col overflow-hidden"
+        >
+          <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
             {errorMsg && (
-              <div className="banner banner-error" style={{ marginBottom: 0 }}>
+              <div className="rounded-lg border border-destructive/40 bg-destructive/15 p-3 text-xs text-destructive">
                 ⚠️ {errorMsg}
               </div>
             )}
 
             {/* Section 1: Customer & Object */}
-            <div className="form-card" style={{ padding: '20px' }}>
-              <h3 style={{ margin: '0 0 14px', fontSize: '15px', color: 'var(--text-bright)' }}>
+            <div className="rounded-lg border border-slate-800 bg-[#111726] p-4 sm:p-5 space-y-4">
+              <h3 className="text-sm font-semibold text-white">
                 1. Customer &amp; Object Details
               </h3>
-              <div className="form-grid-2">
-                <div className="form-group">
-                  <label className="form-label" htmlFor="edit-item">
-                    Printed Item / Part Name *
-                  </label>
-                  <input
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                <Field className="space-y-1.5">
+                  <FieldLabel htmlFor="edit-item" required>
+                    Printed Item / Part Name
+                  </FieldLabel>
+                  <Input
                     id="edit-item"
                     value={item}
                     onChange={(e) => setItem(e.target.value)}
                     required
                   />
-                </div>
+                </Field>
 
-                <div className="form-group">
-                  <label className="form-label" htmlFor="edit-customer">
-                    Customer Name *
-                  </label>
-                  <input
+                <Field className="space-y-1.5">
+                  <FieldLabel htmlFor="edit-customer" required>
+                    Customer Name
+                  </FieldLabel>
+                  <Input
                     id="edit-customer"
                     value={customer}
                     onChange={(e) => setCustomer(e.target.value)}
                     required
                   />
-                </div>
+                </Field>
 
-                <div className="form-group">
-                  <label className="form-label" htmlFor="edit-contact">
-                    Customer Contact (Phone / Email)
-                  </label>
-                  <input
+                <Field className="space-y-1.5 sm:col-span-2">
+                  <FieldLabel htmlFor="edit-contact">Customer Contact</FieldLabel>
+                  <Input
                     id="edit-contact"
                     value={customerContact}
                     onChange={(e) => setCustomerContact(e.target.value)}
                     placeholder="+91..."
                   />
-                </div>
+                </Field>
 
-                <div className="form-grid-3" style={{ gap: '10px' }}>
-                  <div className="form-group">
-                    <label className="form-label" htmlFor="edit-qty">Qty</label>
-                    <input
+                <div className="grid grid-cols-3 gap-2.5 sm:col-span-2">
+                  <Field className="space-y-1.5">
+                    <FieldLabel htmlFor="edit-qty">Qty</FieldLabel>
+                    <Input
                       id="edit-qty"
                       type="number"
                       min="1"
                       value={qty}
                       onChange={(e) => setQty(e.target.value)}
                     />
-                  </div>
+                  </Field>
 
-                  <div className="form-group">
-                    <label className="form-label" htmlFor="edit-price">Price (₹)</label>
-                    <input
-                      id="edit-price"
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={price}
-                      onChange={(e) => setPrice(e.target.value)}
-                      placeholder="0.00"
-                    />
-                  </div>
+                  <Field className="space-y-1.5">
+                    <FieldLabel htmlFor="edit-price">Price</FieldLabel>
+                    <InputGroup>
+                      <InputLeftAddon>₹</InputLeftAddon>
+                      <Input
+                        id="edit-price"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={price}
+                        onChange={(e) => setPrice(e.target.value)}
+                        placeholder="0.00"
+                        className="rounded-l-none"
+                      />
+                    </InputGroup>
+                  </Field>
 
-                  <div className="form-group">
-                    <label className="form-label" htmlFor="edit-weight">Weight (g)</label>
-                    <input
-                      id="edit-weight"
-                      type="number"
-                      step="any"
-                      min="0"
-                      value={weightG}
-                      onChange={(e) => setWeightG(e.target.value)}
-                      placeholder="grams"
-                    />
-                  </div>
+                  <Field className="space-y-1.5">
+                    <FieldLabel htmlFor="edit-weight">Net Weight</FieldLabel>
+                    <InputGroup>
+                      <Input
+                        id="edit-weight"
+                        type="number"
+                        step="any"
+                        min="0"
+                        value={weightG}
+                        onChange={(e) => setWeightG(e.target.value)}
+                        placeholder="0"
+                        className="rounded-r-none"
+                      />
+                      <InputRightAddon>g</InputRightAddon>
+                    </InputGroup>
+                  </Field>
                 </div>
+
+                {/* Print Infill Density Slider */}
+                <Field className="space-y-2 sm:col-span-2 pt-2 border-t border-slate-800">
+                  <div className="flex items-center justify-between text-xs">
+                    <FieldLabel>Internal Print Infill</FieldLabel>
+                    <span className="font-mono text-cyan font-bold">{infill[0]}%</span>
+                  </div>
+                  <Slider
+                    value={infill}
+                    onValueChange={setInfill}
+                    min={0}
+                    max={100}
+                    step={5}
+                    className="py-1"
+                  />
+                </Field>
               </div>
 
               {hasValidWeight && (
-                <div style={{ marginTop: '12px', fontSize: '11.5px', color: 'var(--accent)', fontFamily: 'var(--font-mono)' }}>
-                  🧵 Total with +10% misc overhead: <strong>{Math.round(weightNum * 1.1 * 10) / 10}g</strong> ({weightNum}g net + {Math.round(weightNum * 0.1 * 10) / 10}g misc)
+                <div className="text-[11px] font-mono text-[#ff783b]">
+                  🧵 Total with +10% misc overhead:{' '}
+                  <strong>{Math.round(weightNum * 1.1 * 10) / 10}g</strong> ({weightNum}g
+                  net + {Math.round(weightNum * 0.1 * 10) / 10}g misc)
                 </div>
               )}
             </div>
 
             {/* Section 2: Priority & Deadline */}
-            <div className="form-card" style={{ padding: '20px' }}>
-              <h3 style={{ margin: '0 0 14px', fontSize: '15px', color: 'var(--text-bright)' }}>
+            <div className="rounded-lg border border-slate-800 bg-[#111726] p-4 sm:p-5 space-y-4">
+              <h3 className="text-sm font-semibold text-white">
                 2. Priority &amp; Delivery Deadline
               </h3>
-              <div className="form-grid-2">
-                <div className="form-group">
-                  <label className="form-label">Processing Priority</label>
-                  <div className="priority-toggle-wrap">
-                    <button
-                      type="button"
-                      className={`prio-btn prio-standard ${priority === 'standard' ? 'active' : ''}`}
-                      onClick={() => setPriority('standard')}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                <Field className="space-y-1.5">
+                  <FieldLabel>Processing Priority</FieldLabel>
+                  <ToggleGroup
+                    type="single"
+                    value={priority}
+                    onValueChange={(val) => val && setPriority(val)}
+                    className="grid grid-cols-2 gap-2"
+                  >
+                    <ToggleGroupItem
+                      value="standard"
+                      variant="outline"
+                      className="w-full text-xs font-medium border-slate-700 data-[state=on]:bg-slate-800 data-[state=on]:border-slate-500 text-slate-300"
                     >
                       Standard
-                    </button>
-                    <button
-                      type="button"
-                      className={`prio-btn prio-express ${priority === 'express' ? 'active' : ''}`}
-                      onClick={() => setPriority('express')}
+                    </ToggleGroupItem>
+                    <ToggleGroupItem
+                      value="express"
+                      variant="outline"
+                      className="w-full text-xs font-semibold border-slate-700 data-[state=on]:border-primary data-[state=on]:bg-primary/20 data-[state=on]:text-primary"
                     >
-                      ⚡ Express
-                    </button>
-                  </div>
-                </div>
+                      <Sparkles className="mr-1.5 h-3.5 w-3.5 text-primary" /> Express
+                    </ToggleGroupItem>
+                  </ToggleGroup>
+                </Field>
 
-                <div className="form-group">
-                  <label className="form-label" htmlFor="edit-date">Expected Delivery Date</label>
-                  <input
-                    id="edit-date"
-                    type="date"
-                    value={deliveryDate}
-                    onChange={(e) => setDeliveryDate(e.target.value)}
+                <Field className="space-y-1.5">
+                  <FieldLabel htmlFor="edit-date">Expected Delivery Date</FieldLabel>
+                  <DatePicker
+                    date={deliveryDate}
+                    onChange={setDeliveryDate}
+                    placeholder="Set delivery date"
                   />
+                </Field>
+
+                {/* Additional Spec Checkboxes & Expedite Switch */}
+                <div className="sm:col-span-2 flex flex-wrap items-center gap-5 pt-1 border-t border-slate-800/60">
+                  <label className="flex items-center gap-2 cursor-pointer text-xs text-slate-300 hover:text-white select-none">
+                    <Checkbox
+                      checked={primerRequired}
+                      onCheckedChange={setPrimerRequired}
+                    />
+                    <span>Primer base coat required</span>
+                  </label>
+                  <div className="flex items-center gap-2 select-none">
+                    <Switch
+                      id="edit-express-switch"
+                      checked={priority === 'express'}
+                      onCheckedChange={(checked) => setPriority(checked ? 'express' : 'standard')}
+                    />
+                    <label htmlFor="edit-express-switch" className="text-xs text-slate-300 cursor-pointer">
+                      Rush expedite
+                    </label>
+                  </div>
                 </div>
               </div>
 
-              <div className="form-group" style={{ marginTop: '14px' }}>
-                <label className="form-label" htmlFor="edit-desc">General Order Notes / Description</label>
-                <textarea
+              <div className="space-y-1.5">
+                <Label htmlFor="edit-desc">Order Description / Notes</Label>
+                <Textarea
                   id="edit-desc"
-                  rows="2"
+                  rows={2}
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="Special customer requests or print notes..."
@@ -439,12 +535,12 @@ export function EditOrderModal({ order, onClose, onSave, onDeleteOrder }) {
             </div>
 
             {/* Section 3: Paint & Finishing Specifications */}
-            <div className="form-card" style={{ padding: '20px' }}>
-              <h3 style={{ margin: '0 0 14px', fontSize: '15px', color: 'var(--text-bright)' }}>
+            <div className="rounded-lg border border-slate-800 bg-[#111726] p-4 sm:p-5 space-y-4">
+              <h3 className="text-sm font-semibold text-white">
                 3. Paint Colours &amp; Surface Specifications
               </h3>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div className="space-y-4">
                 <ColorSelector
                   label="Primary Base Colour"
                   name={primaryName}
@@ -469,12 +565,14 @@ export function EditOrderModal({ order, onClose, onSave, onDeleteOrder }) {
                 />
 
                 {extraColors.map((ec, idx) => (
-                  <div key={idx} style={{ position: 'relative', background: 'rgba(255,255,255,0.02)', padding: '12px', borderRadius: 'var(--radius-sm)' }}>
+                  <div
+                    key={idx}
+                    className="relative rounded-lg border border-slate-800 bg-[#0a0f19] p-3 space-y-2"
+                  >
                     <button
                       type="button"
-                      style={{ position: 'absolute', right: '10px', top: '10px', color: 'var(--danger)', fontSize: '12px' }}
+                      className="absolute right-3 top-3 text-xs text-destructive hover:underline"
                       onClick={() => handleRemoveExtraColor(idx)}
-                      title="Remove accent"
                     >
                       ✕ Remove
                     </button>
@@ -491,47 +589,57 @@ export function EditOrderModal({ order, onClose, onSave, onDeleteOrder }) {
                   </div>
                 ))}
 
-                <button
+                <Button
                   type="button"
-                  style={{ alignSelf: 'flex-start', color: 'var(--accent)', fontSize: '13px', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                  variant="outline"
+                  size="sm"
                   onClick={handleAddExtraColor}
+                  className="text-xs text-primary border-primary/30 hover:bg-primary/10"
                 >
-                  + Add Additional Colour Accent
-                </button>
+                  <Plus className="mr-1 h-3.5 w-3.5" /> Add Additional Accent
+                </Button>
 
-                <div className="form-grid-2">
-                  <div className="form-group">
-                    <label className="form-label" htmlFor="edit-paint-type">Paint Chemistry</label>
-                    <select
-                      id="edit-paint-type"
-                      value={paintType}
-                      onChange={(e) => setPaintType(e.target.value)}
-                    >
-                      {PAINT_TYPES.map((t) => (
-                        <option key={t} value={t}>{t}</option>
-                      ))}
-                    </select>
-                  </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                  <Field className="space-y-1.5">
+                    <FieldLabel htmlFor="edit-paint-type">Paint Chemistry</FieldLabel>
+                    <Select value={paintType} onValueChange={setPaintType}>
+                      <SelectTrigger id="edit-paint-type" className="border-border bg-[#101623] text-foreground text-xs h-9">
+                        <SelectValue placeholder="Select paint chemistry" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {PAINT_TYPES.map((t) => (
+                          <SelectItem key={t} value={t} className="text-xs">
+                            {t}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </Field>
 
-                  <div className="form-group">
-                    <label className="form-label" htmlFor="edit-finish">Surface Finish</label>
-                    <select
-                      id="edit-finish"
-                      value={finish}
-                      onChange={(e) => setFinish(e.target.value)}
-                    >
-                      {PAINT_FINISHES.map((f) => (
-                        <option key={f} value={f}>{f}</option>
-                      ))}
-                    </select>
-                  </div>
+                  <Field className="space-y-1.5">
+                    <FieldLabel htmlFor="edit-finish">Surface Finish</FieldLabel>
+                    <Select value={finish} onValueChange={setFinish}>
+                      <SelectTrigger id="edit-finish" className="border-border bg-[#101623] text-foreground text-xs h-9">
+                        <SelectValue placeholder="Select surface finish" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {PAINT_FINISHES.map((f) => (
+                          <SelectItem key={f} value={f} className="text-xs">
+                            {f}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </Field>
                 </div>
 
-                <div className="form-group">
-                  <label className="form-label" htmlFor="edit-instructions">Special Painting Instructions</label>
-                  <textarea
+                <div className="space-y-1.5">
+                  <Label htmlFor="edit-instructions">
+                    Special Painting Instructions
+                  </Label>
+                  <Textarea
                     id="edit-instructions"
-                    rows="2"
+                    rows={2}
                     value={specialInstructions}
                     onChange={(e) => setSpecialInstructions(e.target.value)}
                     placeholder="e.g. Mask edges; apply two coats of clear polyurethane"
@@ -541,148 +649,137 @@ export function EditOrderModal({ order, onClose, onSave, onDeleteOrder }) {
             </div>
 
             {/* Section 4: Photos & 3D Models */}
-            <div className="form-card" style={{ padding: '20px' }}>
-              <h3 style={{ margin: '0 0 14px', fontSize: '15px', color: 'var(--text-bright)' }}>
+            <div className="rounded-lg border border-slate-800 bg-[#111726] p-4 sm:p-5 space-y-4">
+              <h3 className="text-sm font-semibold text-white">
                 4. Attached Photos &amp; 3D Models
               </h3>
 
-              {/* Photos Dropzone & List */}
-              <div style={{ marginBottom: '18px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                  <label className="form-label">Product Photos ({existingPhotos.length + newPhotoFiles.length})</label>
-                  <button
-                    type="button"
-                    style={{ fontSize: '12px', color: 'var(--accent)', fontWeight: 600 }}
-                    onClick={() => photoInputRef.current?.click()}
-                  >
-                    + Add Photos
-                  </button>
-                  <input
-                    ref={photoInputRef}
-                    type="file"
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                  <AttachmentUpload
+                    title="Upload Product Photos"
+                    description="PNG, JPG, WebP images"
                     accept="image/*"
-                    multiple
-                    hidden
-                    onChange={(e) => handleAddPhotos(e.target.files)}
+                    onFilesSelected={handleAddPhotos}
+                    icon={Upload}
                   />
-                </div>
-
-                <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                  {existingPhotos.map((p, idx) => (
-                    <div key={`exist-${idx}`} style={{ position: 'relative', width: '70px', height: '70px', borderRadius: 'var(--radius-sm)', overflow: 'hidden', border: '1px solid var(--line)' }}>
-                      <img src={p.url} alt="existing" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                      <button
-                        type="button"
-                        style={{ position: 'absolute', top: '2px', right: '2px', background: 'rgba(0,0,0,0.7)', color: '#fff', borderRadius: '50%', width: '18px', height: '18px', fontSize: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                        onClick={() => handleRemoveExistingPhoto(idx)}
-                        title="Remove photo"
-                      >
-                        ✕
-                      </button>
-                    </div>
-                  ))}
-
-                  {newPhotoFiles.map((p, idx) => (
-                    <div key={`new-${idx}`} style={{ position: 'relative', width: '70px', height: '70px', borderRadius: 'var(--radius-sm)', overflow: 'hidden', border: '2px solid var(--accent)' }}>
-                      <img src={p.previewUrl} alt="staged" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                      <span style={{ position: 'absolute', bottom: '0', left: '0', right: '0', background: 'var(--accent)', color: '#fff', fontSize: '9px', textAlign: 'center', fontWeight: 700 }}>NEW</span>
-                      <button
-                        type="button"
-                        style={{ position: 'absolute', top: '2px', right: '2px', background: 'rgba(0,0,0,0.7)', color: '#fff', borderRadius: '50%', width: '18px', height: '18px', fontSize: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                        onClick={() => handleRemoveNewPhoto(idx)}
-                        title="Remove photo"
-                      >
-                        ✕
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* 3D Model Files */}
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                  <label className="form-label">3D CAD Files ({existingModels.length + newModelFiles.length})</label>
-                  <button
-                    type="button"
-                    style={{ fontSize: '12px', color: 'var(--cyan)', fontWeight: 600 }}
-                    onClick={() => modelInputRef.current?.click()}
-                  >
-                    + Add 3D Models
-                  </button>
-                  <input
-                    ref={modelInputRef}
-                    type="file"
+                  <AttachmentUpload
+                    title="Upload 3D CAD Models"
+                    description=".stl, .3mf, .obj, .gcode, .step, .zip"
                     accept={MODEL_EXT}
-                    multiple
-                    hidden
-                    onChange={(e) => handleAddModels(e.target.files)}
+                    onFilesSelected={handleAddModels}
+                    icon={Upload}
                   />
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  {existingModels.map((m, idx) => (
-                    <div key={`exist-m-${idx}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 12px', background: 'var(--bg-deep)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--line)' }}>
-                      <span style={{ fontSize: '12.5px', color: 'var(--text-bright)' }}>🧊 {m.name}</span>
-                      <button
-                        type="button"
-                        style={{ color: 'var(--danger)', fontSize: '12px' }}
-                        onClick={() => handleRemoveExistingModel(idx)}
-                      >
-                        Remove
-                      </button>
+                {(existingPhotos.length > 0 ||
+                  newPhotoFiles.length > 0 ||
+                  existingModels.length > 0 ||
+                  newModelFiles.length > 0) && (
+                  <div className="space-y-2 pt-2 border-t border-slate-800">
+                    <div className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                      Current Attachments (
+                      {existingPhotos.length +
+                        newPhotoFiles.length +
+                        existingModels.length +
+                        newModelFiles.length}
+                      )
                     </div>
-                  ))}
-
-                  {newModelFiles.map((m, idx) => (
-                    <div key={`new-m-${idx}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 12px', background: 'var(--cyan-soft)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--cyan)' }}>
-                      <span style={{ fontSize: '12.5px', color: 'var(--cyan)' }}>🧊 {m.name} (Ready to upload)</span>
-                      <button
-                        type="button"
-                        style={{ color: 'var(--danger)', fontSize: '12px' }}
-                        onClick={() => handleRemoveNewModel(idx)}
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  ))}
-                </div>
+                    <AttachmentList>
+                      {existingPhotos.map((p, idx) => (
+                        <AttachmentItem
+                          key={`exist-p-${idx}`}
+                          name={p.name || `Photo #${idx + 1}`}
+                          type="image"
+                          previewUrl={p.url}
+                          onRemove={() => handleRemoveExistingPhoto(idx)}
+                        />
+                      ))}
+                      {newPhotoFiles.map((p, idx) => (
+                        <AttachmentItem
+                          key={`new-p-${idx}`}
+                          name={`${p.name} (New)`}
+                          type="image"
+                          previewUrl={p.previewUrl}
+                          onRemove={() => handleRemoveNewPhoto(idx)}
+                        />
+                      ))}
+                      {existingModels.map((m, idx) => (
+                        <AttachmentItem
+                          key={`exist-m-${idx}`}
+                          name={m.name || `3D Model #${idx + 1}`}
+                          size={m.size}
+                          type="model"
+                          onRemove={() => handleRemoveExistingModel(idx)}
+                        />
+                      ))}
+                      {newModelFiles.map((m, idx) => (
+                        <AttachmentItem
+                          key={`new-m-${idx}`}
+                          name={`${m.name} (New)`}
+                          size={m.size}
+                          type="model"
+                          onRemove={() => handleRemoveNewModel(idx)}
+                        />
+                      ))}
+                    </AttachmentList>
+                  </div>
+                )}
               </div>
             </div>
           </div>
 
-          {/* Guaranteed Sticky Action Footer */}
-          <div className="sheet-foot">
-            {onDeleteOrder && (
-              <button
+          {/* Sticky Actions Footer */}
+          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-800 bg-[#090d16] p-3 sm:p-4">
+            {onDeleteOrder ? (
+              <Button
                 type="button"
-                className="del-btn"
+                variant="ghost"
+                size="sm"
+                className="text-xs text-destructive hover:bg-destructive/15"
                 onClick={() => {
-                  if (window.confirm(`Permanently delete order #${order.id.slice(0, 8)} ("${order.item}") from production queue?`)) {
+                  if (
+                    window.confirm(
+                      `Permanently remove order for "${order.item}" from the studio ledger?`
+                    )
+                  ) {
                     onDeleteOrder(order)
-                    onClose()
                   }
                 }}
-                disabled={saving}
               >
-                🗑️ Delete Order
-              </button>
+                <Trash2 className="mr-1 h-3.5 w-3.5" /> Delete
+              </Button>
+            ) : (
+              <div />
             )}
-            <button
-              type="button"
-              className="btn-secondary"
-              onClick={onClose}
-              disabled={saving}
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="btn-primary"
-              disabled={saving}
-            >
-              {saving ? (uploadStatus || 'Saving Changes...') : 'Save Changes →'}
-            </button>
+
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="text-xs"
+                onClick={onClose}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                variant="default"
+                size="sm"
+                disabled={saving}
+                className="text-xs bg-primary text-white hover:bg-primary/90 flex items-center gap-2"
+              >
+                {saving ? (
+                  <>
+                    <Spinner size="xs" className="text-white" />
+                    <span>{uploadStatus || 'Saving…'}</span>
+                  </>
+                ) : (
+                  'Save Changes ✓'
+                )}
+              </Button>
+            </div>
           </div>
         </form>
       </div>

@@ -1,6 +1,42 @@
-import { useState, useMemo } from 'react'
+import React, { useState, useMemo } from 'react'
 import { calculateFilamentMetrics } from '../services/orderService'
 import { STATUS_LOOKUP } from '../constants/production'
+import { Card } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { ButtonGroup } from '@/components/ui/button-group'
+import { Input } from '@/components/ui/input'
+import { InputGroup, InputLeftElement, InputRightElement } from '@/components/ui/input-group'
+import { Progress } from '@/components/ui/progress'
+import { Separator } from '@/components/ui/separator'
+import { Switch } from '@/components/ui/switch'
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip'
+import { HoverCard, HoverCardTrigger, HoverCardContent } from '@/components/ui/hover-card'
+import { Item, ItemMedia, ItemContent, ItemTitle, ItemDescription, ItemActions } from '@/components/ui/item'
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableHead,
+  TableRow,
+  TableCell,
+} from '@/components/ui/table'
+import {
+  Search,
+  Eye,
+  Pencil,
+  Trash2,
+  Sparkles,
+  Printer,
+  LayoutGrid,
+  Table as TableIcon,
+  X,
+  TrendingUp,
+  Layers,
+  Scale,
+  Award,
+} from 'lucide-react'
 
 const money = (n) =>
   Number(n || 0).toLocaleString('en-IN', {
@@ -28,6 +64,7 @@ export function DeliveredLedger({
   onRemoveOrder,
 }) {
   const [searchQuery, setSearchQuery] = useState('')
+  const [viewMode, setViewMode] = useState('cards') // 'cards' | 'table'
 
   // Filter delivered orders only
   const deliveredSales = useMemo(() => {
@@ -69,113 +106,327 @@ export function DeliveredLedger({
   }, [deliveredSales, searchQuery])
 
   return (
-    <section className="print-ledger-container" aria-label="Delivered print sales ledger">
+    <section className="space-y-6" aria-label="Delivered print sales ledger">
       {/* Workshop Telemetry Deck */}
-      <div className="telemetry-deck">
-        <div className="telemetry-card">
-          <div className="telemetry-label">
-            <span>●</span> Total Delivered Revenue
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Card className="border-slate-800 bg-[#0d131f] p-4 flex flex-col justify-between hover:border-slate-700 transition-colors">
+              <div className="text-xs uppercase font-mono tracking-wider text-slate-400 flex items-center justify-between">
+                <span className="flex items-center gap-1.5">
+                  <TrendingUp className="h-3.5 w-3.5 text-[#05d5b3]" /> Total Revenue
+                </span>
+                <span className="h-2 w-2 rounded-full bg-[#05d5b3]" />
+              </div>
+              <div className="font-mono text-2xl font-bold text-[#05d5b3] my-1">
+                ₹{money(total)}
+              </div>
+              <div className="text-[11px] text-slate-500">
+                {deliveredSales.length} completed prints
+              </div>
+            </Card>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">Cumulative gross revenue from all fulfilled prints</TooltipContent>
+        </Tooltip>
+
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Card className="border-slate-800 bg-[#0d131f] p-4 flex flex-col justify-between hover:border-slate-700 transition-colors">
+              <div className="text-xs uppercase font-mono tracking-wider text-slate-400 flex items-center justify-between">
+                <span className="flex items-center gap-1.5">
+                  <Scale className="h-3.5 w-3.5 text-[#ff783b]" /> Filament Consumed
+                </span>
+                <span>🧵</span>
+              </div>
+              <div className="font-mono text-2xl font-bold text-[#ff783b] my-1">
+                {filamentMetrics.totalGrams} <span className="text-sm font-normal text-slate-400">g</span>
+              </div>
+              <div className="text-[11px] text-slate-500">
+                {filamentMetrics.netGrams}g net + 10% misc ({filamentMetrics.miscGrams}g)
+              </div>
+            </Card>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">Estimated spool material consumption across all delivered jobs</TooltipContent>
+        </Tooltip>
+
+        {/* 3D Printer Z-Axis Build Height Visualizer with Progress */}
+        <Card className="border-slate-800 bg-[#0d131f] p-4 flex flex-col justify-between hover:border-slate-700 transition-colors">
+          <div className="text-[10px] uppercase font-mono tracking-wider text-slate-400 flex items-center justify-between">
+            <span className="flex items-center gap-1.5">
+              <Layers className="h-3.5 w-3.5 text-cyan" /> Avg Sale · Z-Build
+            </span>
+            <span className="font-mono text-[10px] text-cyan">{zFill}%</span>
           </div>
-          <div className="telemetry-val teal">
-            ₹{money(total)}
+          <div className="my-1.5">
+            <div className="font-mono text-xl font-bold text-[#05d5b3] mb-1.5">
+              ₹{money(avg)}
+            </div>
+            <Progress value={zFill} className="h-2 bg-slate-900" indicatorClassName="bg-gradient-to-r from-teal to-cyan" />
           </div>
-          <div className="telemetry-sub">
-            {deliveredSales.length} completed prints on build plate
+          <div className="text-[10.5px] text-slate-500">
+            Z-ratio: {zFill}% of top print (₹{money(best)})
           </div>
+        </Card>
+
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Card className="border-slate-800 bg-[#0d131f] p-4 flex flex-col justify-between hover:border-slate-700 transition-colors">
+              <div className="text-xs uppercase font-mono tracking-wider text-slate-400 flex items-center justify-between">
+                <span className="flex items-center gap-1.5">
+                  <Award className="h-3.5 w-3.5 text-amber-400" /> Top Single Print
+                </span>
+                <span>🏆</span>
+              </div>
+              <div className="font-mono text-2xl font-bold text-white my-1">
+                ₹{money(best)}
+              </div>
+              <div className="text-[11px] text-slate-500">
+                Highest individual completed record
+              </div>
+            </Card>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">Single most valuable delivered order on record</TooltipContent>
+        </Tooltip>
+      </div>
+
+      <Separator className="bg-slate-800/80" />
+
+      {/* Search & View Switcher Bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <h3 className="text-base font-bold text-white tracking-tight flex items-center gap-2">
+            <Printer className="h-4 w-4 text-cyan" />
+            <span>Delivered Prints on Build Plate</span>
+            <span className="font-mono text-xs font-normal text-slate-400">
+              ({filteredSales.length} of {deliveredSales.length} completed)
+            </span>
+          </h3>
         </div>
 
-        <div className="telemetry-card">
-          <div className="telemetry-label">
-            <span>🧵</span> Filament Consumed
-          </div>
-          <div className="telemetry-val accent">
-            {filamentMetrics.totalGrams} <span style={{ fontSize: '18px', color: 'var(--muted-2)' }}>g</span>
-          </div>
-          <div className="telemetry-sub">
-            {filamentMetrics.netGrams}g net + 10% misc ({filamentMetrics.miscGrams}g)
-          </div>
-        </div>
-
-        {/* 3D Printer Z-Axis Build Height Visualizer */}
-        <div className="telemetry-card">
-          <div className="telemetry-label">
-            <span>📐</span> Avg Sale · Build Height
-          </div>
-          <div className="z-visualizer-box">
-            <div className="z-lead screw" style={{ width: '16px', height: '80px', background: 'var(--bg-deep)', borderRadius: 'var(--radius-full)', border: '1px solid var(--line)', position: 'relative', overflow: 'hidden' }}>
-              <div
-                style={{
-                  position: 'absolute',
-                  bottom: 0,
-                  left: 0,
-                  right: 0,
-                  height: `${zFill}%`,
-                  background: 'linear-gradient(180deg, var(--teal), #00b4d8)',
-                  boxShadow: '0 0 10px var(--teal-glow)',
-                  borderRadius: 'var(--radius-full)',
-                  transition: 'height 0.6s ease',
-                }}
+        <div className="flex items-center gap-3">
+          <div className="w-full sm:w-72">
+            <InputGroup>
+              <InputLeftElement>
+                <Search className="h-3.5 w-3.5 text-slate-400" />
+              </InputLeftElement>
+              <Input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Filter item, customer, or color..."
+                className="pl-8 pr-8 text-xs border-slate-800 bg-[#0d131f]"
               />
-            </div>
+              {searchQuery && (
+                <InputRightElement>
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery('')}
+                    className="text-slate-400 hover:text-white"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </InputRightElement>
+              )}
+            </InputGroup>
+          </div>
 
-            <div>
-              <div className="telemetry-val" style={{ fontSize: '24px', margin: 0, color: 'var(--teal)' }}>
-                ₹{money(avg)}
-              </div>
-              <div className="telemetry-sub" style={{ marginTop: '2px' }}>
-                Z-fill: {zFill}% of max (₹{money(best)})
-              </div>
-            </div>
-          </div>
-        </div>
+          <ToggleGroup
+            type="single"
+            value={viewMode}
+            onValueChange={(val) => val && setViewMode(val)}
+            className="border border-slate-800 rounded-md p-0.5 bg-[#0d131f] shrink-0"
+          >
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <ToggleGroupItem
+                  value="cards"
+                  aria-label="Card view"
+                  size="sm"
+                  className="h-7 px-2 text-xs data-[state=on]:bg-slate-800 data-[state=on]:text-cyan"
+                >
+                  <LayoutGrid className="h-3.5 w-3.5" />
+                </ToggleGroupItem>
+              </TooltipTrigger>
+              <TooltipContent side="top">Card view</TooltipContent>
+            </Tooltip>
 
-        <div className="telemetry-card">
-          <div className="telemetry-label">
-            <span>🏆</span> Top Single Layer
-          </div>
-          <div className="telemetry-val" style={{ color: 'var(--text-bright)' }}>
-            ₹{money(best)}
-          </div>
-          <div className="telemetry-sub">Highest individual print record</div>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <ToggleGroupItem
+                  value="table"
+                  aria-label="Table view"
+                  size="sm"
+                  className="h-7 px-2 text-xs data-[state=on]:bg-slate-800 data-[state=on]:text-cyan"
+                >
+                  <TableIcon className="h-3.5 w-3.5" />
+                </ToggleGroupItem>
+              </TooltipTrigger>
+              <TooltipContent side="top">Table view</TooltipContent>
+            </Tooltip>
+          </ToggleGroup>
         </div>
       </div>
 
-      {/* Search & Counter Strip */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap' }}>
-        <div style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-bright)' }}>
-          Delivered Prints on Build Plate{' '}
-          <span style={{ fontSize: '13px', color: 'var(--muted)', fontWeight: 'normal', fontFamily: 'var(--font-mono)' }}>
-            / {filteredSales.length} of {deliveredSales.length} completed
-          </span>
-        </div>
-
-        <div style={{ position: 'relative', width: '320px' }}>
-          <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--muted-2)' }}>
-            🔍
-          </span>
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Filter delivered item, customer, or color..."
-            style={{ width: '100%', paddingLeft: '36px' }}
-          />
-        </div>
-      </div>
-
-      {/* Interactive Layer Stack */}
+      {/* Layer Stack / Content View */}
       {filteredSales.length === 0 ? (
-        <div className="table-wrapper" style={{ padding: '60px 20px', textAlign: 'center' }}>
-          <div style={{ fontSize: '32px', marginBottom: '12px' }}>🖨️</div>
-          <h3 style={{ margin: '0 0 6px', color: 'var(--text-bright)' }}>No delivered print orders found</h3>
-          <p style={{ color: 'var(--muted)', fontSize: '13.5px', margin: 0 }}>
+        <div className="flex flex-col items-center justify-center rounded-xl border border-slate-800 bg-[#0d131f] p-12 text-center">
+          <div className="mb-3 text-4xl">🖨️</div>
+          <h4 className="text-base font-semibold text-white">No delivered print orders found</h4>
+          <p className="mt-1 text-xs text-slate-400">
             {searchQuery
               ? 'No delivered orders matched your search query.'
-              : 'Orders will appear here once they are marked as Completed in the Painting Dashboard.'}
+              : 'Orders will appear here once marked Completed in the Painting Dashboard.'}
           </p>
         </div>
+      ) : viewMode === 'table' ? (
+        /* Table View using shadcn Table components */
+        <div className="rounded-xl border border-slate-800 bg-[#0e1422] overflow-hidden">
+          <Table>
+            <TableHeader className="bg-slate-900/60 border-b border-slate-800">
+              <TableRow className="border-slate-800 hover:bg-transparent">
+                <TableHead className="w-16 font-mono text-xs">Layer</TableHead>
+                <TableHead className="text-xs">Print Item</TableHead>
+                <TableHead className="text-xs">Customer</TableHead>
+                <TableHead className="text-xs">Weight &amp; Material</TableHead>
+                <TableHead className="text-xs text-right">Price</TableHead>
+                <TableHead className="text-xs text-right">Completed</TableHead>
+                <TableHead className="w-24 text-center text-xs">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredSales.map((s, i) => {
+                const idx = filteredSales.length - i
+                const ts = tsMillis(s)
+                const isExpress = s.priority === 'express' || s.print_type === 'express'
+
+                return (
+                  <TableRow
+                    key={s.id}
+                    className="border-slate-800/80 hover:bg-slate-800/40 cursor-pointer"
+                    onClick={() => onOpenOrder(s)}
+                  >
+                    <TableCell className="font-mono text-xs font-bold text-cyan">
+                      L-{String(idx).padStart(2, '0')}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-white text-xs">{s.item}</span>
+                        {s.qty > 1 && (
+                          <span className="rounded bg-slate-800 px-1.5 py-0.2 font-mono text-[10px] text-cyan">
+                            ×{s.qty}
+                          </span>
+                        )}
+                        {isExpress && (
+                          <Badge variant="express" className="py-0 px-1.5 text-[9px]">
+                            Express
+                          </Badge>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <HoverCard>
+                        <HoverCardTrigger asChild>
+                          <span className="text-xs text-slate-300 underline-offset-2 hover:underline cursor-pointer">
+                            {s.customer}
+                          </span>
+                        </HoverCardTrigger>
+                        <HoverCardContent className="w-64 border-slate-700 bg-[#0d131f] text-xs space-y-1.5">
+                          <div className="font-semibold text-white">{s.customer}</div>
+                          {s.customer_contact && (
+                            <div className="text-slate-400 text-[11px] font-mono">
+                              {s.customer_contact}
+                            </div>
+                          )}
+                          <div className="text-slate-500 text-[10px] pt-1 border-t border-slate-800">
+                            Delivered record #{s.id?.slice(0, 8)}
+                          </div>
+                        </HoverCardContent>
+                      </HoverCard>
+                    </TableCell>
+                    <TableCell className="text-xs text-slate-400">
+                      <div className="flex items-center gap-1.5">
+                        {s.weight_g != null && <span>🧵 {s.weight_g}g</span>}
+                        {s.primary_color && (
+                          <span className="inline-flex items-center gap-1 ml-1">
+                            <span
+                              className="h-2 w-2 rounded-full"
+                              style={{ backgroundColor: s.primary_color_code || '#888' }}
+                            />
+                            <span>{s.primary_color}</span>
+                          </span>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-right font-mono font-bold text-[#05d5b3] text-xs">
+                      ₹{money(s.price)}
+                    </TableCell>
+                    <TableCell className="text-right font-mono text-[11px] text-slate-500">
+                      {relTime(ts)}
+                    </TableCell>
+                    <TableCell onClick={(e) => e.stopPropagation()} className="text-center">
+                      <ButtonGroup className="justify-center">
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="xs"
+                              className="h-7 px-1.5 text-cyan hover:bg-slate-800"
+                              onClick={() => onOpenOrder(s)}
+                            >
+                              <Eye className="h-3.5 w-3.5" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent side="top">Inspect</TooltipContent>
+                        </Tooltip>
+
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="xs"
+                              className="h-7 px-1.5 text-slate-300 hover:bg-slate-800"
+                              onClick={() => onEditOrder(s)}
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent side="top">Edit</TooltipContent>
+                        </Tooltip>
+
+                        {onRemoveOrder && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="xs"
+                                className="h-7 px-1.5 text-destructive hover:bg-destructive/15"
+                                onClick={() => {
+                                  if (
+                                    window.confirm(
+                                      `Permanently delete delivered print "${s.item}" from ledger?`
+                                    )
+                                  ) {
+                                    onRemoveOrder(s)
+                                  }
+                                }}
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent side="top">Delete</TooltipContent>
+                          </Tooltip>
+                        )}
+                      </ButtonGroup>
+                    </TableCell>
+                  </TableRow>
+                )
+              })}
+            </TableBody>
+          </Table>
+        </div>
       ) : (
-        <div className="ledger-stack">
+        /* Card View using Item and Card primitives */
+        <div className="space-y-2.5">
           {filteredSales.map((s, i) => {
             const idx = filteredSales.length - i
             const ts = tsMillis(s)
@@ -183,145 +434,151 @@ export function DeliveredLedger({
             const isExpress = s.priority === 'express' || s.print_type === 'express'
 
             return (
-              <div
+              <Card
                 key={s.id}
-                className="layer-row"
                 onClick={() => onOpenOrder(s)}
-                role="button"
-                tabIndex={0}
-                onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onOpenOrder(s)}
+                className="group flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-slate-800 bg-[#0e1422] p-3.5 hover:border-slate-700 hover:bg-[#111728] transition-all cursor-pointer"
               >
-                {/* Layer Index */}
-                <div className="layer-idx" title={`Deposited Layer ${idx}`}>
-                  L-{String(idx).padStart(2, '0')}
-                </div>
+                {/* Left: Layer Number & Item component */}
+                <Item className="gap-3 min-w-0">
+                  <ItemMedia className="flex h-9 w-12 shrink-0 items-center justify-center rounded bg-slate-900 border border-slate-800 font-mono text-xs font-bold text-cyan">
+                    L-{String(idx).padStart(2, '0')}
+                  </ItemMedia>
 
-                {/* Main Details */}
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text-bright)' }}>
-                      {s.item}
-                    </span>
-                    {s.qty > 1 && <span className="clean-qty-tag">×{s.qty}</span>}
-                    {isExpress ? (
-                      <span className="badge-prio express" style={{ fontSize: '10.5px', padding: '1px 6px' }}>
-                        ⚡ Express
+                  <ItemContent className="min-w-0 space-y-1">
+                    <ItemTitle className="flex items-center gap-2 flex-wrap text-sm">
+                      <span className="font-semibold text-white truncate">
+                        {s.item}
                       </span>
-                    ) : (
-                      <span style={{ fontSize: '10.5px', color: 'var(--muted-2)' }}>Regular</span>
-                    )}
-                    <span
-                      style={{
-                        fontSize: '11px',
-                        padding: '1px 8px',
-                        borderRadius: 'var(--radius-full)',
-                        background: 'rgba(16, 185, 129, 0.15)',
-                        color: 'var(--emerald)',
-                        border: '1px solid rgba(16, 185, 129, 0.3)',
-                      }}
-                    >
-                      ● Completed
-                    </span>
-                  </div>
+                      {s.qty > 1 && (
+                        <span className="rounded bg-slate-800 px-1.5 py-0.2 font-mono text-[10px] text-cyan">
+                          ×{s.qty}
+                        </span>
+                      )}
+                      {isExpress ? (
+                        <Badge variant="express" className="py-0 px-2 text-[10px]">
+                          <Sparkles className="mr-1 h-2.5 w-2.5" /> Express
+                        </Badge>
+                      ) : (
+                        <span className="text-[10px] text-slate-500">Regular</span>
+                      )}
+                      <Badge variant="emerald" className="py-0 px-2 text-[10px]">
+                        ● Completed
+                      </Badge>
+                    </ItemTitle>
 
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: 'var(--muted)', marginTop: '4px', flexWrap: 'wrap' }}>
-                    <span style={{ color: 'var(--text)' }}>👤 {s.customer}</span>
+                    <ItemDescription className="flex items-center gap-2 text-xs text-slate-400 flex-wrap">
+                      <HoverCard>
+                        <HoverCardTrigger asChild>
+                          <span className="text-slate-300 hover:text-white cursor-pointer underline-offset-2 hover:underline">
+                            👤 {s.customer}
+                          </span>
+                        </HoverCardTrigger>
+                        <HoverCardContent className="w-60 border-slate-700 bg-[#0d131f] text-xs">
+                          <div className="font-semibold text-white">{s.customer}</div>
+                          {s.customer_contact && (
+                            <div className="text-slate-400 text-[11px] font-mono mt-0.5">
+                              {s.customer_contact}
+                            </div>
+                          )}
+                        </HoverCardContent>
+                      </HoverCard>
 
-                    {s.weight_g != null && (
-                      <>
-                        <span>·</span>
-                        <span title={`Net weight: ${s.weight_g}g + 10% misc overhead`}>
-                          🧵 {s.weight_g}g{' '}
-                          <span style={{ color: 'var(--accent)', fontSize: '11px' }}>
+                      {s.weight_g != null && (
+                        <span>
+                          · 🧵 {s.weight_g}g{' '}
+                          <span className="text-[#ff783b] text-[10.5px]">
                             (+10%: {Math.round(Number(s.weight_g) * 1.1 * 10) / 10}g)
                           </span>
                         </span>
-                      </>
-                    )}
-
-                    {shots > 0 && (
-                      <>
-                        <span>·</span>
-                        <span>📷 {shots} photo{shots > 1 ? 's' : ''}</span>
-                      </>
-                    )}
-
-                    {s.model_files?.length > 0 && (
-                      <>
-                        <span>·</span>
-                        <span>🧊 {s.model_files.length} file{s.model_files.length > 1 ? 's' : ''}</span>
-                      </>
-                    )}
-
-                    {s.primary_color && (
-                      <>
-                        <span>·</span>
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                      )}
+                      {shots > 0 && <span>· 📷 {shots} photo{shots > 1 ? 's' : ''}</span>}
+                      {s.model_files?.length > 0 && (
+                        <span>· 🧊 {s.model_files.length} file{s.model_files.length > 1 ? 's' : ''}</span>
+                      )}
+                      {s.primary_color && (
+                        <span className="inline-flex items-center gap-1.5">
+                          ·
                           <span
-                            style={{
-                              width: '8px',
-                              height: '8px',
-                              borderRadius: '50%',
-                              backgroundColor: s.primary_color_code || '#888',
-                              display: 'inline-block',
-                            }}
+                            className="h-2 w-2 rounded-full"
+                            style={{ backgroundColor: s.primary_color_code || '#888' }}
                           />
-                          {s.primary_color}
+                          <span>{s.primary_color}</span>
                         </span>
-                      </>
+                      )}
+                    </ItemDescription>
+                  </ItemContent>
+                </Item>
+
+                {/* Right: Price, RelTime & ButtonGroup Actions */}
+                <div
+                  className="flex items-center justify-between sm:justify-end gap-3 shrink-0 pt-2 border-t border-slate-800/80 sm:border-t-0 sm:pt-0"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div className="text-left sm:text-right">
+                    <div className="font-mono text-base font-bold text-[#05d5b3]">
+                      ₹{money(s.price)}
+                    </div>
+                    <div className="font-mono text-[10px] text-slate-500">
+                      {relTime(ts)}
+                    </div>
+                  </div>
+
+                  <ButtonGroup className="gap-0.5">
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="xs"
+                          className="h-7 text-xs text-cyan hover:bg-slate-800"
+                          onClick={() => onOpenOrder(s)}
+                        >
+                          <Eye className="h-3.5 w-3.5" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent side="top">Inspect details</TooltipContent>
+                    </Tooltip>
+
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="xs"
+                          className="h-7 text-xs text-slate-300 hover:bg-slate-800"
+                          onClick={() => onEditOrder(s)}
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent side="top">Edit order</TooltipContent>
+                    </Tooltip>
+
+                    {onRemoveOrder && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="xs"
+                            className="h-7 text-xs text-destructive hover:bg-destructive/15"
+                            onClick={() => {
+                              if (
+                                window.confirm(
+                                  `Permanently delete delivered print "${s.item}" from ledger?`
+                                )
+                              ) {
+                                onRemoveOrder(s)
+                              }
+                            }}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent side="top">Delete from ledger</TooltipContent>
+                      </Tooltip>
                     )}
-                  </div>
+                  </ButtonGroup>
                 </div>
-
-                {/* Price & Timestamp */}
-                <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '18px', fontWeight: 700, color: 'var(--teal)' }}>
-                    ₹{money(s.price)}
-                  </div>
-                  <div style={{ fontSize: '11.5px', color: 'var(--muted-2)', fontFamily: 'var(--font-mono)' }}>
-                    {relTime(ts)}
-                  </div>
-                </div>
-
-                {/* Action Buttons */}
-                <div style={{ display: 'flex', gap: '6px' }} onClick={(e) => e.stopPropagation()}>
-                  <button
-                    type="button"
-                    className="btn-inspect"
-                    onClick={() => onOpenOrder(s)}
-                    title="Inspect order details"
-                  >
-                    Inspect
-                  </button>
-                  <button
-                    type="button"
-                    className="btn-edit"
-                    onClick={() => onEditOrder(s)}
-                    title="Edit order specs"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    type="button"
-                    style={{
-                      padding: '5px 8px',
-                      borderRadius: 'var(--radius-sm)',
-                      background: 'var(--danger-soft)',
-                      color: '#f87171',
-                      border: '1px solid rgba(239, 68, 68, 0.3)',
-                      fontSize: '12px',
-                    }}
-                    onClick={() => {
-                      if (window.confirm(`Permanently delete delivered print "${s.item}" from ledger?`)) {
-                        onRemoveOrder(s)
-                      }
-                    }}
-                    title="Delete print from ledger"
-                  >
-                    🗑️
-                  </button>
-                </div>
-              </div>
+              </Card>
             )
           })}
         </div>

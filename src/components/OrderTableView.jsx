@@ -1,7 +1,46 @@
-import { useState } from 'react'
+import React, { useState } from 'react'
 import { getDeliveryDeadlineInfo } from '../services/orderService'
 import { PRODUCTION_STATUSES, STATUS_LOOKUP } from '../constants/production'
 import { ColorSwatch } from './ColorSwatch'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { ButtonGroup } from '@/components/ui/button-group'
+import { Separator } from '@/components/ui/separator'
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableHead,
+  TableRow,
+  TableCell,
+} from '@/components/ui/table'
+import {
+  HoverCard,
+  HoverCardTrigger,
+  HoverCardContent,
+} from '@/components/ui/hover-card'
+import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+  TooltipProvider,
+} from '@/components/ui/tooltip'
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+} from '@/components/ui/dropdown-menu'
+import {
+  MoreVertical,
+  Eye,
+  Pencil,
+  Trash2,
+  Sparkles,
+  ChevronDown,
+} from 'lucide-react'
 
 export function OrderTableView({
   orders,
@@ -21,17 +60,21 @@ export function OrderTableView({
 
   const handleDelete = (e, o) => {
     e.stopPropagation()
-    if (window.confirm(`Permanently delete order #${o.id.slice(0, 8)} ("${o.item}") from production queue?`)) {
+    if (
+      window.confirm(
+        `Permanently delete order #${o.id.slice(0, 8)} ("${o.item}") from production queue?`
+      )
+    ) {
       onDeleteOrder?.(o)
     }
   }
 
   if (orders.length === 0) {
     return (
-      <div className="table-wrapper" style={{ padding: '60px 20px', textAlign: 'center' }}>
-        <div style={{ fontSize: '32px', marginBottom: '12px' }}>🔍</div>
-        <h3 style={{ margin: '0 0 6px', color: 'var(--text-bright)' }}>No orders match your criteria</h3>
-        <p style={{ color: 'var(--muted)', fontSize: '13.5px', margin: 0 }}>
+      <div className="flex flex-col items-center justify-center rounded-xl border border-slate-800 bg-[#0d131f] p-12 text-center">
+        <div className="mb-3 text-4xl">🔍</div>
+        <h3 className="mb-1 text-lg font-semibold text-white">No orders match your criteria</h3>
+        <p className="text-sm text-slate-400">
           Try clearing your active search query, timeframe, or priority filters.
         </p>
       </div>
@@ -48,237 +91,265 @@ export function OrderTableView({
   const formatShortId = (id) => (id ? `#${id.slice(0, 8)}` : '—')
 
   return (
-    <div className="table-wrapper">
-      <table className="clean-table" aria-label="Production queue orders">
-        <thead>
-          <tr>
-            <th style={{ width: '125px' }}>Order ID</th>
-            <th style={{ minWidth: '170px' }}>Customer</th>
-            <th style={{ minWidth: '200px' }}>Item &amp; Pricing</th>
-            <th style={{ width: '115px' }}>Priority</th>
-            <th style={{ minWidth: '155px' }}>Delivery Deadline</th>
-            <th style={{ minWidth: '180px' }}>Paint Colours &amp; Finish</th>
-            <th style={{ minWidth: '180px' }}>Production Status</th>
-            <th style={{ width: '150px', textAlign: 'right' }}>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {orders.map((o) => {
-            const deadline = getDeliveryDeadlineInfo(o)
-            const statusMeta = STATUS_LOOKUP[o.production_status] || STATUS_LOOKUP.order_received
-            const colors = o.colors || []
-            const isExpress = o.priority === 'express'
-            const isCopied = copiedId === o.id
+    <div className="w-full overflow-hidden rounded-xl border border-slate-800 bg-[#0e1422] shadow-xl">
+      <TooltipProvider>
+        <Table aria-label="Production queue orders">
+          <TableHeader>
+            <TableRow className="border-b border-slate-800 bg-[#090d16] text-[11px] uppercase tracking-wider text-slate-400">
+              <TableHead className="py-3 pl-4 pr-3 text-slate-400">Order ID</TableHead>
+              <TableHead className="px-3 py-3 text-slate-400">Customer</TableHead>
+              <TableHead className="px-3 py-3 text-slate-400">Item &amp; Pricing</TableHead>
+              <TableHead className="px-3 py-3 text-slate-400">Priority</TableHead>
+              <TableHead className="px-3 py-3 text-slate-400">Delivery Deadline</TableHead>
+              <TableHead className="px-3 py-3 text-slate-400">Colours &amp; Finish</TableHead>
+              <TableHead className="px-3 py-3 text-slate-400">Status</TableHead>
+              <TableHead className="py-3 pl-3 pr-4 text-right text-slate-400">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {orders.map((o) => {
+              const deadline = getDeliveryDeadlineInfo(o)
+              const statusMeta =
+                STATUS_LOOKUP[o.production_status] || STATUS_LOOKUP.order_received
+              const colors = o.colors || []
+              const isExpress = o.priority === 'express'
+              const isCopied = copiedId === o.id
 
-            return (
-              <tr
-                key={o.id}
-                className={`clean-row ${isExpress ? 'clean-row-express' : ''} ${deadline.isOverdue ? 'clean-row-overdue' : ''}`}
-                onClick={() => onOpenOrder(o)}
-              >
-                {/* Order ID with Click-to-Copy */}
-                <td>
-                  <button
-                    type="button"
-                    className="clean-id-pill"
-                    onClick={(e) => handleCopyId(e, o.id)}
-                    title="Click to copy full Order ID"
-                  >
-                    {isCopied ? '✓ Copied' : formatShortId(o.id)}
-                  </button>
-                  <span className="clean-id-date">
-                    {new Date(o.created_at).toLocaleDateString('en-IN', {
-                      day: 'numeric',
-                      month: 'short',
-                    })}
-                  </span>
-                </td>
+              return (
+                <TableRow
+                  key={o.id}
+                  onClick={() => onOpenOrder(o)}
+                  className={`group cursor-pointer transition-colors hover:bg-slate-800/40 ${
+                    isExpress ? 'bg-[#ff5e1e]/[0.02]' : ''
+                  }`}
+                >
+                  {/* Order ID */}
+                  <TableCell className="py-3 pl-4 pr-3 font-mono">
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          type="button"
+                          onClick={(e) => handleCopyId(e, o.id)}
+                          className="rounded bg-slate-900 px-2 py-0.5 text-[11px] font-semibold text-cyan hover:bg-slate-800 transition-colors"
+                        >
+                          {isCopied ? '✓ Copied' : formatShortId(o.id)}
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent>Click to copy ID ({o.id})</TooltipContent>
+                    </Tooltip>
+                    <span className="block text-[10px] text-slate-500 mt-0.5">
+                      {new Date(o.created_at).toLocaleDateString('en-IN', {
+                        day: 'numeric',
+                        month: 'short',
+                      })}
+                    </span>
+                  </TableCell>
 
-                {/* Customer with Avatar Initial */}
-                <td>
-                  <div className="cell-customer-wrap">
-                    <div className="customer-avatar">
-                      {getInitials(o.customer)}
-                    </div>
-                    <div>
-                      <div className="clean-cust-name">{o.customer}</div>
-                      {o.customer_contact ? (
-                        <div className="clean-cust-contact">{o.customer_contact}</div>
-                      ) : (
-                        <div className="clean-cust-contact" style={{ opacity: 0.5, fontStyle: 'italic' }}>
-                          No phone/email
+                  {/* Customer */}
+                  <TableCell className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
+                    <HoverCard>
+                      <HoverCardTrigger asChild>
+                        <div
+                          className="flex items-center gap-2 cursor-pointer"
+                          onClick={() => onOpenOrder(o)}
+                        >
+                          <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-800 text-[10px] font-bold text-slate-300">
+                            {getInitials(o.customer)}
+                          </div>
+                          <div className="min-w-0">
+                            <div className="font-medium text-white truncate max-w-[120px] hover:text-cyan transition-colors">
+                              {o.customer}
+                            </div>
+                            {o.customer_contact && (
+                              <div className="text-[10.5px] text-slate-500 truncate max-w-[120px]">
+                                {o.customer_contact}
+                              </div>
+                            )}
+                          </div>
                         </div>
+                      </HoverCardTrigger>
+                      <HoverCardContent className="w-60 text-xs space-y-1.5" align="start">
+                        <div className="font-semibold text-white">{o.customer}</div>
+                        <Separator />
+                        <div className="text-slate-400 text-[11px] space-y-0.5">
+                          {o.customer_contact && (
+                            <div>Contact: <span className="text-slate-200">{o.customer_contact}</span></div>
+                          )}
+                          <div>Item: <span className="text-cyan">{o.item}</span></div>
+                          <div>Status: <span className="text-slate-200">{statusMeta.label}</span></div>
+                        </div>
+                      </HoverCardContent>
+                    </HoverCard>
+                  </TableCell>
+
+                  {/* Item & Pricing */}
+                  <TableCell className="px-3 py-3">
+                    <div className="font-medium text-white line-clamp-1 max-w-[200px]">
+                      {o.item}{' '}
+                      {o.qty > 1 && (
+                        <span className="rounded bg-slate-800 px-1 py-0.2 text-[10px] font-mono text-cyan">
+                          ×{o.qty}
+                        </span>
                       )}
                     </div>
-                  </div>
-                </td>
-
-                {/* Item & Financials */}
-                <td>
-                  <div className="clean-item-title">
-                    <span>{o.item}</span>
-                    {o.qty > 1 && <span className="clean-qty-tag">×{o.qty}</span>}
-                  </div>
-                  <div className="clean-item-sub">
-                    {Number(o.price || 0) > 0 ? (
-                      <span className="clean-price">
-                        ₹{Number(o.price || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                    <div className="flex items-center gap-2 mt-0.5 font-mono text-[11px]">
+                      <span className="text-[#05d5b3] font-bold">
+                        {Number(o.price || 0) > 0
+                          ? `₹${Number(o.price).toLocaleString('en-IN')}`
+                          : 'Pending'}
                       </span>
-                    ) : (
-                      <span style={{ color: 'var(--muted-2)', fontStyle: 'italic', fontSize: '12px' }}>
-                        Price Pending
-                      </span>
-                    )}
-
-                    {o.weight_g != null && Number(o.weight_g) > 0 ? (
-                      <span
-                        className="clean-weight"
-                        title={`Net weight: ${o.weight_g}g + 10% misc overhead: ${Math.round(Number(o.weight_g) * 0.1 * 10) / 10}g`}
-                      >
-                        · 🧵 {Math.round(Number(o.weight_g) * 1.1 * 10) / 10}g
-                        <span className="clean-weight-misc"> (+10%)</span>
-                      </span>
-                    ) : (
-                      <span style={{ color: 'var(--muted-2)', fontStyle: 'italic', fontSize: '11px' }}>
-                        · Weight Pending
-                      </span>
-                    )}
-                  </div>
-                </td>
-
-                {/* Priority */}
-                <td>
-                  {isExpress ? (
-                    <span className="badge-prio express" title="Express Queue Priority">
-                      ⚡ Express
-                    </span>
-                  ) : (
-                    <span className="badge-prio standard" title="Standard Queue Priority">
-                      Standard
-                    </span>
-                  )}
-                </td>
-
-                {/* Delivery Deadline */}
-                <td>
-                  {o.delivery_date ? (
-                    <div>
-                      <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-bright)' }}>
-                        {new Date(o.delivery_date).toLocaleDateString('en-IN', {
-                          day: 'numeric',
-                          month: 'short',
-                          year: 'numeric',
-                        })}
-                      </div>
-                      <span className={`clean-deadline-tag ${deadline.badgeClass}`}>
-                        {deadline.badgeText}
-                      </span>
+                      {o.weight_g != null && Number(o.weight_g) > 0 && (
+                        <span className="text-slate-400">
+                          🧵 {Math.round(Number(o.weight_g) * 1.1 * 10) / 10}g
+                        </span>
+                      )}
                     </div>
-                  ) : (
-                    <span style={{ color: 'var(--muted-2)', fontStyle: 'italic', fontSize: '12px' }}>
-                      Unscheduled
-                    </span>
-                  )}
-                </td>
+                  </TableCell>
 
-                {/* Paint Colours & Finish */}
-                <td>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                    {colors.length > 0 ? (
-                      colors.map((c, i) => (
+                  {/* Priority */}
+                  <TableCell className="px-3 py-3 whitespace-nowrap">
+                    {isExpress ? (
+                      <Badge variant="express" className="py-0 px-2 text-[10.5px]">
+                        <Sparkles className="mr-1 h-3 w-3" /> Express
+                      </Badge>
+                    ) : (
+                      <span className="text-slate-500 text-[11px]">Standard</span>
+                    )}
+                  </TableCell>
+
+                  {/* Deadline */}
+                  <TableCell className="px-3 py-3 whitespace-nowrap">
+                    {o.delivery_date ? (
+                      <div>
+                        <span
+                          className={`clean-deadline-tag ${deadline.badgeClass} text-[10px]`}
+                        >
+                          {deadline.badgeText}
+                        </span>
+                        <span className="block text-[10px] text-slate-500 mt-0.5">
+                          {new Date(o.delivery_date).toLocaleDateString('en-IN', {
+                            day: 'numeric',
+                            month: 'short',
+                          })}
+                        </span>
+                      </div>
+                    ) : (
+                      <span className="text-slate-600 italic">None set</span>
+                    )}
+                  </TableCell>
+
+                  {/* Paint Colours & Finish */}
+                  <TableCell className="px-3 py-3">
+                    <div className="flex flex-wrap gap-1">
+                      {colors.length > 0 ? (
+                        colors.slice(0, 2).map((c, i) => (
+                          <ColorSwatch key={i} name={c.name} code={c.code} compact />
+                        ))
+                      ) : o.primary_color || o.primary_color_code ? (
                         <ColorSwatch
-                          key={i}
-                          name={c.name}
-                          code={c.code}
-                          finish={c.finish}
-                          paintType={c.paint_type}
-                          role={c.role}
+                          name={o.primary_color}
+                          code={o.primary_color_code}
                           compact
                         />
-                      ))
-                    ) : o.primary_color || o.primary_color_code ? (
-                      <ColorSwatch
-                        name={o.primary_color}
-                        code={o.primary_color_code}
-                        finish={o.finish}
-                        paintType={o.paint_type}
-                        role="Primary"
-                        compact
-                      />
-                    ) : (
-                      <span style={{ color: 'var(--muted-2)', fontStyle: 'italic', fontSize: '12px' }}>
-                        Standard primer
-                      </span>
-                    )}
-                  </div>
-                  {o.finish && (
-                    <span style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '3px', display: 'inline-block' }}>
-                      {o.finish} finish
-                    </span>
-                  )}
-                </td>
+                      ) : (
+                        <span className="text-[11px] text-slate-500 italic">Primer</span>
+                      )}
+                    </div>
+                  </TableCell>
 
-                {/* Production Status Selector */}
-                <td onClick={(e) => e.stopPropagation()}>
-                  <div className="status-dropdown-wrapper">
-                    <span
-                      className="status-dropdown-dot"
-                      style={{ backgroundColor: statusMeta.color }}
-                    />
-                    <select
-                      className="status-dropdown-select"
-                      value={o.production_status}
-                      aria-label="Update production status"
-                      onChange={(e) => onStatusChange(o, e.target.value)}
-                      style={{ color: statusMeta.color }}
-                    >
-                      {PRODUCTION_STATUSES.map((s) => (
-                        <option key={s.id} value={s.id}>
-                          {s.label}
-                        </option>
-                      ))}
-                    </select>
-                    <span className="status-dropdown-chevron" aria-hidden="true">▾</span>
-                  </div>
-                </td>
+                  {/* Status Dropdown / Badge */}
+                  <TableCell className="px-3 py-3 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <button
+                          type="button"
+                          className="flex items-center gap-1.5 rounded-full border border-slate-700/80 bg-slate-900/80 px-2.5 py-1 text-[11px] font-medium text-white transition-all hover:border-slate-600"
+                        >
+                          <span
+                            className="h-2 w-2 rounded-full"
+                            style={{ backgroundColor: statusMeta.color }}
+                          />
+                          <span>{statusMeta.label}</span>
+                          <ChevronDown className="h-3 w-3 opacity-60" />
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="start">
+                        <DropdownMenuLabel>Move to list</DropdownMenuLabel>
+                        {PRODUCTION_STATUSES.map((status) => (
+                          <DropdownMenuItem
+                            key={status.id}
+                            disabled={o.production_status === status.id}
+                            onClick={() => onStatusChange(o, status.id)}
+                            className="flex items-center gap-2"
+                          >
+                            <span
+                              className="h-2 w-2 rounded-full"
+                              style={{ backgroundColor: status.color }}
+                            />
+                            <span>{status.label}</span>
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
 
-                {/* Actions */}
-                <td className="cell-actions" onClick={(e) => e.stopPropagation()}>
-                  <div className="action-btn-group">
-                    <button
-                      type="button"
-                      className="btn-inspect"
-                      onClick={() => onOpenOrder(o)}
-                      title="Inspect full details, photos & CAD models"
-                    >
-                      Inspect
-                    </button>
-                    <button
-                      type="button"
-                      className="btn-edit"
-                      onClick={() => onEditOrder(o)}
-                      title="Edit order specs and files"
-                    >
-                      Edit
-                    </button>
-                    {onDeleteOrder && (
-                      <button
-                        type="button"
-                        className="btn-delete"
-                        onClick={(e) => handleDelete(e, o)}
-                        title="Delete order"
-                        aria-label={`Delete order ${o.item}`}
-                      >
-                        🗑️
-                      </button>
-                    )}
-                  </div>
-                </td>
-              </tr>
-            )
-          })}
-        </tbody>
-      </table>
+                  {/* Actions using ButtonGroup and Tooltip */}
+                  <TableCell className="py-3 pl-3 pr-4 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                    <ButtonGroup className="justify-end">
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="xs"
+                            className="h-7 text-cyan hover:bg-slate-800"
+                            onClick={() => onOpenOrder(o)}
+                            aria-label="Inspect details"
+                          >
+                            <Eye className="h-3.5 w-3.5" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Inspect details</TooltipContent>
+                      </Tooltip>
+
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="xs"
+                            className="h-7 text-slate-300 hover:bg-slate-800"
+                            onClick={() => onEditOrder(o)}
+                            aria-label="Edit order"
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Edit order</TooltipContent>
+                      </Tooltip>
+
+                      {onDeleteOrder && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="xs"
+                              className="h-7 text-destructive hover:bg-destructive/15"
+                              onClick={(e) => handleDelete(e, o)}
+                              aria-label="Delete order"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Delete order</TooltipContent>
+                        </Tooltip>
+                      )}
+                    </ButtonGroup>
+                  </TableCell>
+                </TableRow>
+              )
+            })}
+          </TableBody>
+        </Table>
+      </TooltipProvider>
     </div>
   )
 }
