@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react'
-import { PRIORITIES, PAINT_FINISHES, PAINT_TYPES } from '../constants/production'
+import { PRIORITIES, PAINT_FINISHES } from '../constants/production'
 import { ColorSelector } from './ColorSelector'
 import { ColorSwatch } from './ColorSwatch'
 import { supabase, isConfigured, BUCKET } from '../supabase'
@@ -51,13 +51,13 @@ export function NewOrderIntake({ user, isSandbox, onError, onSaved }) {
   const [primaryColorCode, setPrimaryColorCode] = useState('')
   const [secondaryColorName, setSecondaryColorName] = useState('')
   const [secondaryColorCode, setSecondaryColorCode] = useState('')
-  const [paintType, setPaintType] = useState('Acrylic')
   const [finish, setFinish] = useState('Satin')
   const [specialInstructions, setSpecialInstructions] = useState('')
   const [colorNotes, setColorNotes] = useState('')
   const [extraColors, setExtraColors] = useState([])
 
   // Files
+  const [modelLink, setModelLink] = useState('')
   const [modelFiles, setModelFiles] = useState([])
   const [images, setImages] = useState([])
 
@@ -79,9 +79,13 @@ export function NewOrderIntake({ user, isSandbox, onError, onSaved }) {
 
   const priceNum = Number(price)
   const weightNum = Number(weight)
+  const isModelLinkValid =
+    !modelLink.trim() || /^https?:\/\/\S+$/i.test(modelLink.trim())
   const isPriceValid = price === '' || (!Number.isNaN(priceNum) && priceNum >= 0)
   const isWeightValid = weight === '' || (!Number.isNaN(weightNum) && weightNum >= 0)
-  const isValid = Boolean(item.trim() && customer.trim() && isPriceValid && isWeightValid)
+  const isValid = Boolean(
+    item.trim() && customer.trim() && isPriceValid && isWeightValid && isModelLinkValid
+  )
 
   const hasValidWeight = weight !== '' && !Number.isNaN(weightNum) && weightNum > 0
   const totalFilamentGrams = hasValidWeight ? Math.round(weightNum * 1.1 * 10) / 10 : 0
@@ -94,12 +98,6 @@ export function NewOrderIntake({ user, isSandbox, onError, onSaved }) {
   const handleAddModels = (files) => {
     const list = Array.from(files || [])
     if (list.length) setModelFiles((prev) => [...prev, ...list])
-  }
-
-  const handleDatePreset = (daysAhead) => {
-    const d = new Date()
-    d.setDate(d.getDate() + daysAhead)
-    setDeliveryDate(d.toISOString().split('T')[0])
   }
 
   const resetForm = () => {
@@ -115,7 +113,7 @@ export function NewOrderIntake({ user, isSandbox, onError, onSaved }) {
     setPrimaryColorCode('')
     setSecondaryColorName('')
     setSecondaryColorCode('')
-    setPaintType('Acrylic')
+    setModelLink('')
     setFinish('Satin')
     setSpecialInstructions('')
     setColorNotes('')
@@ -140,7 +138,6 @@ export function NewOrderIntake({ user, isSandbox, onError, onSaved }) {
           role: 'Primary',
           name: primaryColorName.trim(),
           code: primaryColorCode.trim(),
-          paint_type: paintType,
           finish,
           notes: colorNotes.trim(),
         })
@@ -150,7 +147,6 @@ export function NewOrderIntake({ user, isSandbox, onError, onSaved }) {
           role: 'Secondary',
           name: secondaryColorName.trim(),
           code: secondaryColorCode.trim(),
-          paint_type: paintType,
           finish,
           notes: '',
         })
@@ -161,7 +157,6 @@ export function NewOrderIntake({ user, isSandbox, onError, onSaved }) {
             role: ec.role || 'Accent',
             name: ec.name.trim(),
             code: ec.code.trim(),
-            paint_type: ec.paint_type || paintType,
             finish: ec.finish || finish,
             notes: '',
           })
@@ -209,7 +204,7 @@ export function NewOrderIntake({ user, isSandbox, onError, onSaved }) {
         primary_color_code: primaryColorCode.trim(),
         secondary_color: secondaryColorName.trim(),
         secondary_color_code: secondaryColorCode.trim(),
-        paint_type: paintType,
+        model_link: modelLink.trim(),
         finish,
         special_instructions: specialInstructions.trim(),
         color_notes: colorNotes.trim(),
@@ -427,6 +422,7 @@ export function NewOrderIntake({ user, isSandbox, onError, onSaved }) {
             <Field className="space-y-1.5">
               <FieldLabel htmlFor="new-date">Expected Delivery Date</FieldLabel>
               <DatePicker
+                id="new-date"
                 date={deliveryDate}
                 onChange={setDeliveryDate}
                 placeholder="Select expected date"
@@ -485,7 +481,7 @@ export function NewOrderIntake({ user, isSandbox, onError, onSaved }) {
                 Paint Colours &amp; Surface Specifications
               </h3>
               <p className="text-xs text-slate-400">
-                Select studio paint shades, chemistry, and surface finish.
+                Pick any color. Set finish.
               </p>
             </div>
           </div>
@@ -515,22 +511,6 @@ export function NewOrderIntake({ user, isSandbox, onError, onSaved }) {
             />
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Field className="space-y-1.5">
-                <FieldLabel htmlFor="new-paint-type">Paint Chemistry</FieldLabel>
-                <Select value={paintType} onValueChange={setPaintType}>
-                  <SelectTrigger id="new-paint-type" className="border-border bg-[#101623] text-foreground text-xs h-9">
-                    <SelectValue placeholder="Select paint chemistry" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {PAINT_TYPES.map((t) => (
-                      <SelectItem key={t} value={t} className="text-xs">
-                        {t}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </Field>
-
               <Field className="space-y-1.5">
                 <FieldLabel htmlFor="new-finish">Surface Finish</FieldLabel>
                 <Select value={finish} onValueChange={setFinish}>
@@ -578,6 +558,22 @@ export function NewOrderIntake({ user, isSandbox, onError, onSaved }) {
           </div>
 
           <div className="space-y-4">
+            <Field className="space-y-1.5">
+              <FieldLabel htmlFor="new-model-link">3D model link</FieldLabel>
+              <Input
+                id="new-model-link"
+                type="url"
+                pattern="https?://.+"
+                title="Enter a link that starts with http:// or https://"
+                value={modelLink}
+                onChange={(event) => setModelLink(event.target.value)}
+                placeholder="https://..."
+                aria-invalid={!isModelLinkValid}
+              />
+              {!isModelLinkValid && (
+                <p className="text-sm text-destructive">Use an http or https link.</p>
+              )}
+            </Field>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <AttachmentUpload
                 title="Attach Reference Photos"
@@ -724,7 +720,6 @@ export function NewOrderIntake({ user, isSandbox, onError, onSaved }) {
                   name={primaryColorName}
                   code={primaryColorCode}
                   finish={finish}
-                  paintType={paintType}
                   role="Base"
                   compact
                 />

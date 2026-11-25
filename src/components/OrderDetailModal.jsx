@@ -61,6 +61,11 @@ export function OrderDetailModal({
   const colors = order.colors || []
   const photos = order.imageUrls || []
   const modelFiles = order.modelFiles || []
+  const modelLink =
+    typeof order.model_link === 'string' &&
+    /^https?:\/\/\S+$/i.test(order.model_link.trim())
+      ? order.model_link.trim()
+      : ''
 
   // Load chronological history when opened
   useEffect(() => {
@@ -378,7 +383,6 @@ export function OrderDetailModal({
                         name={c.name}
                         code={c.code}
                         finish={c.finish}
-                        paintType={c.paint_type}
                         role={c.role || `Colour #${i + 1}`}
                       />
                     ))
@@ -388,7 +392,6 @@ export function OrderDetailModal({
                         name={order.primary_color}
                         code={order.primary_color_code}
                         finish={order.finish}
-                        paintType={order.paint_type}
                         role="Primary Colour"
                       />
                       {(order.secondary_color || order.secondary_color_code) && (
@@ -396,7 +399,6 @@ export function OrderDetailModal({
                           name={order.secondary_color}
                           code={order.secondary_color_code}
                           finish={order.finish}
-                          paintType={order.paint_type}
                           role="Secondary Colour"
                         />
                       )}
@@ -408,15 +410,7 @@ export function OrderDetailModal({
                   )}
                 </div>
 
-                <div className="grid grid-cols-2 gap-3 pt-3 border-t border-slate-800 text-xs">
-                  <div>
-                    <span className="text-[10px] uppercase font-bold text-slate-500">
-                      Paint Chemistry
-                    </span>
-                    <div className="text-xs text-slate-300 mt-0.5">
-                      {order.paint_type || 'Unspecified'}
-                    </div>
-                  </div>
+                <div className="grid grid-cols-1 gap-3 pt-3 border-t border-slate-800 text-xs">
                   <div>
                     <span className="text-[10px] uppercase font-bold text-slate-500">
                       Surface Finish
@@ -677,9 +671,19 @@ export function OrderDetailModal({
                     ))}
                   </div>
                 ) : (
-                  <div className="py-8 text-center text-xs text-slate-500">
-                    No 3D CAD models attached.
+                  <div className="py-4 text-xs text-slate-500">
+                    No uploaded model files.
                   </div>
+                )}
+                {modelLink && (
+                  <a
+                    href={modelLink}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex max-w-full items-center gap-2 break-all text-sm underline underline-offset-4"
+                  >
+                    Open model link
+                  </a>
                 )}
               </div>
             </div>

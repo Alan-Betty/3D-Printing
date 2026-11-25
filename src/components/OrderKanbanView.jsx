@@ -132,7 +132,7 @@ export function OrderKanbanView({
 
       {/* Kanban Columns Grid / Board */}
       <div
-        className="flex gap-4 overflow-x-auto pb-6 scrollbar-thin scrollbar-thumb-slate-700"
+        className="kanban-full-width grid min-w-0 grid-cols-1 gap-3 pb-6 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6"
         role="region"
         aria-label="Production stages kanban board"
       >
@@ -147,7 +147,7 @@ export function OrderKanbanView({
           return (
             <div
               key={col.id}
-              className={`flex min-w-[300px] max-w-[340px] flex-1 flex-col rounded-xl border bg-[#0d131f]/95 p-3 transition-all duration-200 ${
+              className={`flex min-w-0 flex-col rounded-xl border bg-[#0d131f]/95 p-3 transition-all duration-200 ${
                 isOver
                   ? 'border-primary ring-2 ring-primary/40 bg-[#141d2f]'
                   : 'border-slate-800/80'

@@ -2,7 +2,6 @@ import React, { useState, useRef, useEffect } from 'react'
 import {
   PRIORITIES,
   PAINT_FINISHES,
-  PAINT_TYPES,
   STATUS_LOOKUP,
 } from '../constants/production'
 import { ColorSelector } from './ColorSelector'
@@ -50,8 +49,8 @@ export function EditOrderModal({ order, onClose, onSave, onDeleteOrder }) {
   const [primaryCode, setPrimaryCode] = useState(order.primary_color_code || '')
   const [secondaryName, setSecondaryName] = useState(order.secondary_color || '')
   const [secondaryCode, setSecondaryCode] = useState(order.secondary_color_code || '')
-  const [paintType, setPaintType] = useState(order.paint_type || 'Acrylic')
   const [finish, setFinish] = useState(order.finish || 'Satin')
+  const [modelLink, setModelLink] = useState(order.model_link || '')
   const [specialInstructions, setSpecialInstructions] = useState(
     order.special_instructions || ''
   )
@@ -115,7 +114,6 @@ export function EditOrderModal({ order, onClose, onSave, onDeleteOrder }) {
         role: `Accent #${prev.length + 1}`,
         name: '',
         code: '',
-        paint_type: paintType,
         finish,
         notes: '',
       },
@@ -170,6 +168,10 @@ export function EditOrderModal({ order, onClose, onSave, onDeleteOrder }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    if (modelLink.trim() && !/^https?:\/\/\S+$/i.test(modelLink.trim())) {
+      setErrorMsg('Use an http or https link for the 3D model.')
+      return
+    }
     setSaving(true)
     setErrorMsg('')
     setUploadStatus('Saving changes...')
@@ -220,7 +222,6 @@ export function EditOrderModal({ order, onClose, onSave, onDeleteOrder }) {
           role: 'Primary',
           name: primaryName.trim(),
           code: primaryCode.trim(),
-          paint_type: paintType,
           finish,
           notes: colorNotes.trim(),
         })
@@ -230,7 +231,6 @@ export function EditOrderModal({ order, onClose, onSave, onDeleteOrder }) {
           role: 'Secondary',
           name: secondaryName.trim(),
           code: secondaryCode.trim(),
-          paint_type: paintType,
           finish,
           notes: '',
         })
@@ -241,7 +241,6 @@ export function EditOrderModal({ order, onClose, onSave, onDeleteOrder }) {
             role: ec.role || 'Accent',
             name: ec.name.trim(),
             code: ec.code.trim(),
-            paint_type: ec.paint_type || paintType,
             finish: ec.finish || finish,
             notes: ec.notes || '',
           })
@@ -276,7 +275,7 @@ export function EditOrderModal({ order, onClose, onSave, onDeleteOrder }) {
         primary_color_code: primaryCode.trim(),
         secondary_color: secondaryName.trim(),
         secondary_color_code: secondaryCode.trim(),
-        paint_type: paintType,
+        model_link: modelLink.trim(),
         finish,
         special_instructions: specialInstructions.trim(),
         color_notes: colorNotes.trim(),
@@ -494,6 +493,7 @@ export function EditOrderModal({ order, onClose, onSave, onDeleteOrder }) {
                 <Field className="space-y-1.5">
                   <FieldLabel htmlFor="edit-date">Expected Delivery Date</FieldLabel>
                   <DatePicker
+                    id="edit-date"
                     date={deliveryDate}
                     onChange={setDeliveryDate}
                     placeholder="Set delivery date"
@@ -601,22 +601,6 @@ export function EditOrderModal({ order, onClose, onSave, onDeleteOrder }) {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                   <Field className="space-y-1.5">
-                    <FieldLabel htmlFor="edit-paint-type">Paint Chemistry</FieldLabel>
-                    <Select value={paintType} onValueChange={setPaintType}>
-                      <SelectTrigger id="edit-paint-type" className="border-border bg-[#101623] text-foreground text-xs h-9">
-                        <SelectValue placeholder="Select paint chemistry" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {PAINT_TYPES.map((t) => (
-                          <SelectItem key={t} value={t} className="text-xs">
-                            {t}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </Field>
-
-                  <Field className="space-y-1.5">
                     <FieldLabel htmlFor="edit-finish">Surface Finish</FieldLabel>
                     <Select value={finish} onValueChange={setFinish}>
                       <SelectTrigger id="edit-finish" className="border-border bg-[#101623] text-foreground text-xs h-9">
@@ -655,6 +639,19 @@ export function EditOrderModal({ order, onClose, onSave, onDeleteOrder }) {
               </h3>
 
               <div className="space-y-4">
+                <Field className="space-y-1.5">
+                  <FieldLabel htmlFor="edit-model-link">3D model link</FieldLabel>
+                  <Input
+                    id="edit-model-link"
+                    type="url"
+                    pattern="https?://.+"
+                    title="Enter a link that starts with http:// or https://"
+                    value={modelLink}
+                    onChange={(event) => setModelLink(event.target.value)}
+                    placeholder="https://..."
+                    aria-invalid={Boolean(errorMsg && modelLink.trim() && !/^https?:\/\/\S+$/i.test(modelLink.trim()))}
+                  />
+                </Field>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                   <AttachmentUpload
                     title="Upload Product Photos"

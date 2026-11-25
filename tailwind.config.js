@@ -30,7 +30,7 @@ export default {
           foreground: 'hsl(var(--muted-foreground))',
         },
         accent: {
-          DEFAULT: 'hsl(var(--accent))',
+          DEFAULT: 'hsl(var(--accent-ui))',
           foreground: 'hsl(var(--accent-foreground))',
         },
         popover: {
@@ -42,16 +42,16 @@ export default {
           foreground: 'hsl(var(--card-foreground))',
         },
         cyan: {
-          DEFAULT: '#00F0FF',
-          muted: 'rgba(0, 240, 255, 0.15)',
+          DEFAULT: '#444444',
+          muted: '#f3f3f3',
         },
         orange: {
-          DEFAULT: '#FF5E1E',
-          muted: 'rgba(255, 94, 30, 0.15)',
+          DEFAULT: '#444444',
+          muted: '#f3f3f3',
         },
         teal: {
-          DEFAULT: '#2DD4BF',
-          muted: 'rgba(45, 212, 191, 0.15)',
+          DEFAULT: '#444444',
+          muted: '#f3f3f3',
         },
       },
       borderRadius: {

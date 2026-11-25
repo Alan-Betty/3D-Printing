@@ -4,7 +4,6 @@ export function ColorSwatch({
   name,
   code,
   finish,
-  paintType,
   role = '',
   compact = false,
 }) {
@@ -81,7 +80,6 @@ export function ColorSwatch({
         </div>
         <div style={{ fontSize: '11px', color: 'var(--muted)', display: 'flex', gap: '6px', marginTop: '2px' }}>
           {hasCode && <span style={{ fontFamily: 'var(--font-mono)' }}>{code}</span>}
-          {paintType && <span>· {paintType}</span>}
           {finish && <span>· {finish}</span>}
         </div>
       </div>

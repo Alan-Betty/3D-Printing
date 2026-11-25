@@ -249,7 +249,7 @@ export function SimpleFilterHub({
       {/* Bottom Row: Pipeline Status Stepper Tabs with live count tags */}
       <div className="flex flex-col gap-2.5 pt-2 border-t border-slate-800/80 sm:flex-row sm:items-center sm:justify-between">
         <nav
-          className="flex items-center gap-1 overflow-x-auto pb-1 scrollbar-none"
+          className="flex flex-wrap items-center gap-1 pb-1"
           aria-label="Production pipeline filter tabs"
         >
           <button

@@ -143,7 +143,7 @@ async function enrich(rows) {
 const friendly = (err) => {
   const msg = err?.message || String(err)
   if (/schema cache|does not exist|42P01/i.test(msg))
-    return 'Database columns missing. Run supabase/migrations/001_order_management.sql in SQL Editor.'
+    return 'Database columns missing. Run supabase/migrations/001_order_management.sql and 002_model_link.sql in SQL Editor.'
   if (/row-level security|permission|not authorized|403/i.test(msg))
     return 'Blocked by Row Level Security. Run supabase/schema.sql in SQL Editor.'
   if (/bucket/i.test(msg))
@@ -274,13 +274,7 @@ function Login({ onEnterSandbox }) {
     }
 
     setBusy(false)
-    setErr('Invalid credentials. Site User ID is "Thulasi" and password is "Type-C".')
-  }
-
-  const handleQuickDemo = () => {
-    setUsername('Thulasi')
-    setPassword('Type-C')
-    onEnterSandbox('Thulasi')
+    setErr('Invalid credentials. Check your user ID and password.')
   }
 
   return (
@@ -296,16 +290,7 @@ function Login({ onEnterSandbox }) {
           <span className="studio-badge">Pyraxis Prints Studio</span>
         </div>
         <h1 className="gate-title">LayerLedger Console</h1>
-        <p className="gate-sub">Enter operator credentials to access production tracking and order management.</p>
-
-        {/* 1-Click Quick Demo Access Chip */}
-        <div
-          className="gate-demo-chip"
-          onClick={handleQuickDemo}
-          title="Click to fill operator demo login"
-        >
-          ⚡ Demo Access: <strong>Thulasi</strong> / <strong>Type-C</strong> (Click to fill)
-        </div>
+        <p className="gate-sub">Sign in to track orders.</p>
 
         <FieldGroup className="gate-input-wrap space-y-3">
           <Field>
@@ -735,13 +720,13 @@ function Ledger({ user, isSandbox, onSignOut }) {
               </span>
             </div>
             <div className="text-[11px] text-slate-400">
-              3D Print &amp; Finishing Production Console
+              3D print order tracker
             </div>
           </div>
         </div>
 
         {/* Center Mode Switcher Tabs */}
-        <nav className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none w-full lg:w-auto" role="tablist">
+        <nav className="flex flex-wrap items-center gap-1.5 pb-1 sm:pb-0 w-full lg:w-auto" role="tablist">
           <button
             type="button"
             role="tab"
@@ -753,7 +738,7 @@ function Ledger({ user, isSandbox, onSignOut }) {
             }`}
             onClick={() => setActiveNav('dashboard')}
           >
-            <span>📋</span> Painting Dashboard
+            Orders
             <span className="rounded-full bg-slate-800 px-1.5 py-0.2 text-[10px] text-slate-300">
               {dashboardStats.totalActive}
             </span>
@@ -769,7 +754,7 @@ function Ledger({ user, isSandbox, onSignOut }) {
             }`}
             onClick={() => setActiveNav('print-ledger')}
           >
-            <span>🖨️</span> Print Sales Ledger
+            Sales
             <span className="rounded-full bg-[#2dd4bf]/20 px-1.5 py-0.2 text-[10px] text-[#2dd4bf] font-bold">
               {deliveredSalesCount}
             </span>
@@ -785,7 +770,7 @@ function Ledger({ user, isSandbox, onSignOut }) {
             }`}
             onClick={() => setActiveNav('new-order')}
           >
-            <span>➕</span> New Order Intake
+            New order
           </button>
         </nav>
 
@@ -993,7 +978,7 @@ function Ledger({ user, isSandbox, onSignOut }) {
           <NewOrderIntake
             user={user}
             isSandbox={!isConfigured || isSandbox}
-            onError={setError}
+            onError={(message) => setError(friendly(message))}
             onSaved={(newOrder) => {
               if (newOrder && (!isConfigured || isSandbox)) {
                 setSales((prev) => {

@@ -8,12 +8,14 @@ Instead of generic business accounting, **LayerLedger** treats commercial sales 
 
 ## Features
 
-- **Workshop Console Aesthetic**: High-contrast industrial dark mode built with Space Grotesk and JetBrains Mono typography, custom filament spool indicators, and tactile feedback.
+- **Workshop Console**: Minimal black-and-white dark mode for 3D-print order tracking.
 - **Additive Manufacturing Specifics**:
   - Gram weight tracking per item
   - Speed presets: **Regular** vs. **Express**
   - Quantity tracking and INR currency formatting (`₹`)
+  - Custom color picker and finish choices
   - CAD model attachments (`.stl`, `.3mf`, `.obj`, `.gcode`, `.step`, `.stp`, `.zip`)
+  - External 3D model links
   - Finished product photo documentation with direct mobile camera capture (`capture="environment"`)
 - **Real-Time Cross-Device Sync**: Powered by Supabase Realtime WebSocket subscriptions.
 - **Secure File Storage**: Private bucket storage for 3D models and photos with short-lived signed URLs (8-hour TTL).
@@ -60,6 +62,8 @@ This script:
 - Enables Realtime replication on `public.sales`.
 - Creates the private `sales` storage bucket with authenticated RLS access policies.
 
+For an existing database, run [`supabase/migrations/002_model_link.sql`](supabase/migrations/002_model_link.sql) to add model links.
+
 ### 4. Create an Operator User
 1. In the Supabase Dashboard, go to **Authentication** → **Users**.
 2. Click **Add User** → **Create User**.
@@ -85,7 +89,8 @@ LayerLedger/
 │   ├── main.jsx             # React entrypoint
 │   └── supabase.js          # Supabase client initialization & config checks
 ├── supabase/
-│   └── schema.sql           # Database schema, RLS policies, & bucket creation
+│   ├── schema.sql           # Database schema, RLS policies, & bucket creation
+│   └── migrations/          # Additive database migrations
 ├── .env.example             # Sample environment configuration
 ├── package.json             # NPM dependencies & scripts
 └── vite.config.js           # Vite configuration

@@ -25,6 +25,7 @@ create table if not exists public.sales (
   color_notes          text,
   colors               jsonb not null default '[]',
   model_files          jsonb not null default '[]',
+  model_link           text,
   images               text[] not null default '{}',
   created_at           timestamptz not null default now()
 );
@@ -44,7 +45,8 @@ alter table public.sales
   add column if not exists finish text,
   add column if not exists special_instructions text,
   add column if not exists color_notes text,
-  add column if not exists colors jsonb not null default '[]';
+  add column if not exists colors jsonb not null default '[]',
+  add column if not exists model_link text;
 
 -- Backfill priority based on legacy print_type if present
 update public.sales

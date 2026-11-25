@@ -56,6 +56,7 @@ export function normalizeOrder(order) {
     customer_contact: order.customer_contact || '',
     description: order.description || '',
     delivery_date: order.delivery_date || null,
+    model_link: order.model_link || '',
     primary_color: order.primary_color || colors[0]?.name || '',
     primary_color_code: order.primary_color_code || colors[0]?.code || '',
     secondary_color: order.secondary_color || colors[1]?.name || '',

@@ -213,6 +213,13 @@ describe('orderService', () => {
     expect(normalized.colors).toEqual([])
   })
 
+  it('keeps a model link when normalizing an order', () => {
+    expect(
+      normalizeOrder({ model_link: 'https://example.com/model.stl' }).model_link
+    ).toBe('https://example.com/model.stl')
+    expect(normalizeOrder({}).model_link).toBe('')
+  })
+
   it('validates CSS and hex colors for swatches', () => {
     expect(isValidCssColor('#41e0b3')).toBe(true)
     expect(isValidCssColor('#ff6b35')).toBe(true)
@@ -291,4 +298,3 @@ describe('orderService', () => {
     })
   })
 })
-

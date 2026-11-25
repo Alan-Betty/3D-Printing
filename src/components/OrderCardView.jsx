@@ -252,7 +252,6 @@ export function OrderCardView({
                         name={c.name}
                         code={c.code}
                         finish={c.finish}
-                        paintType={c.paint_type}
                         role={c.role}
                         compact
                       />
@@ -262,7 +261,6 @@ export function OrderCardView({
                       name={o.primary_color}
                       code={o.primary_color_code}
                       finish={o.finish}
-                      paintType={o.paint_type}
                       role="Primary"
                       compact
                     />
