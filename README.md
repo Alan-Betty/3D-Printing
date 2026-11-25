@@ -19,7 +19,8 @@ Instead of generic business accounting, **LayerLedger** treats commercial sales 
   - Finished product photo documentation with direct mobile camera capture (`capture="environment"`)
 - **Real-Time Cross-Device Sync**: Powered by Supabase Realtime WebSocket subscriptions.
 - **Secure File Storage**: Private bucket storage for 3D models and photos with short-lived signed URLs (8-hour TTL).
-- **Operator Authentication Gate**: Streamlined username/password login mapped to a synthetic internal domain (`@pyraxis-prints.app`).
+- **Operator Authentication Gate**: Supabase Auth login mapped to a synthetic internal domain (`@pyraxis-prints.app`).
+- **Record Context Menu**: Right-click an order in board, card, table, or delivered views to edit, inspect, or delete it.
 - **Telemetry & Metrics**: Total revenue, average sale build-height Z-bar visualizer, top single sale, and live layer deposit counter.
 
 ---
@@ -49,7 +50,8 @@ Update `.env.local` with your Supabase credentials:
 VITE_SUPABASE_URL=https://your-project-id.supabase.co
 VITE_SUPABASE_ANON_KEY=your-anon-public-key
 ```
-*(Alternatively, insert them into `src/supabase.js`)*.
+Use only the Supabase anon/publishable key in the browser app. Never expose a service-role key in
+Vite client configuration; access control must be enforced by Supabase Auth and Row Level Security.
 
 ### 3. Run Database Migrations
 1. Open your [Supabase Dashboard](https://supabase.com/dashboard).
@@ -74,7 +76,13 @@ For an existing database, run [`supabase/migrations/002_model_link.sql`](supabas
 ```bash
 npm run dev
 ```
-Open `http://localhost:5173` in your browser, enter your operator username and password, and begin logging layers!
+Open `http://localhost:5173` in your browser and sign in with your Supabase operator account.
+
+Without Supabase credentials, development builds offer a local sample-data preview. It is not an
+authenticated session and its changes are stored only in that browser. Production builds require
+Supabase configuration and do not provide the local preview. The retained `bucket_files/` recovery
+copy is used only by local development and is not included in production builds; cloud attachments
+use signed Supabase URLs only.
 
 ---
 

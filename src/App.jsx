@@ -60,21 +60,48 @@ const TABLE = 'sales'
 const LOCAL_STORAGE_KEY = 'layerledger_orders_v2'
 const ORDER_OVERRIDES_KEY = 'layerledger_order_overrides'
 
-const getOrderOverrides = () => {
+const clearVerifiedLocalOrders = (cloudOrders) => {
   try {
-    return JSON.parse(localStorage.getItem(ORDER_OVERRIDES_KEY) || '{}')
-  } catch {
-    return {}
-  }
-}
+    const cloudById = new Map(cloudOrders.map((order) => [order.id, order]))
+    const cachedRaw = localStorage.getItem(LOCAL_STORAGE_KEY)
+    const overridesRaw = localStorage.getItem(ORDER_OVERRIDES_KEY)
+    const cachedOrders = cachedRaw ? JSON.parse(cachedRaw) : []
+    const overrides = overridesRaw ? JSON.parse(overridesRaw) : {}
 
-const saveOrderOverride = (orderId, updates) => {
-  try {
-    const current = getOrderOverrides()
-    current[orderId] = { ...(current[orderId] || {}), ...updates }
-    localStorage.setItem(ORDER_OVERRIDES_KEY, JSON.stringify(current))
-  } catch (e) {
-    console.warn('Could not save order override:', e)
+    const cachedOrdersMatch =
+      Array.isArray(cachedOrders) &&
+      cachedOrders.every((cached) => {
+        const cloudOrder = cloudById.get(cached.id)
+        return (
+          cloudOrder &&
+          Object.entries(cloudOrder).every(
+            ([key, value]) => JSON.stringify(cached[key]) === JSON.stringify(value)
+          )
+        )
+      })
+    const overridesMatch =
+      overrides &&
+      typeof overrides === 'object' &&
+      !Array.isArray(overrides) &&
+      Object.entries(overrides).every(([id, updates]) => {
+        const cloudOrder = cloudById.get(id)
+        return (
+          cloudOrder &&
+          updates &&
+          typeof updates === 'object' &&
+          Object.entries(updates).every(
+            ([key, value]) => JSON.stringify(cloudOrder[key]) === JSON.stringify(value)
+          )
+        )
+      })
+
+    if (!cachedOrdersMatch || !overridesMatch) return false
+
+    localStorage.removeItem(LOCAL_STORAGE_KEY)
+    localStorage.removeItem(ORDER_OVERRIDES_KEY)
+    return true
+  } catch {
+    return false
   }
 }
 
@@ -87,25 +114,28 @@ const money = (n) =>
     maximumFractionDigits: 2,
   })
 
-/* Turn storage paths into signed URLs or local storage fallback */
+/* Use signed URLs in cloud mode and local paths only in the development preview. */
 async function enrich(rows) {
   return Promise.all(
     rows.map(async (r) => {
       let imageUrls = []
+      let mediaAccessWarning = false
       if (r.images?.length) {
         if (isConfigured) {
           try {
-            const { data } = await supabase.storage
+            const { data, error } = await supabase.storage
               .from(BUCKET)
               .createSignedUrls(r.images, SIGNED_URL_TTL)
+            if (error) throw error
             imageUrls = (data || []).map((d) => d.signedUrl).filter(Boolean)
-          } catch {
-            imageUrls = []
+            mediaAccessWarning ||= imageUrls.length !== r.images.length
+          } catch (error) {
+            console.warn('Could not create signed URLs for order images:', error)
+            mediaAccessWarning = true
           }
-        }
-        if (!imageUrls.length) {
+        } else {
           imageUrls = r.images.map((p) =>
-            p.startsWith('http') || p.startsWith('blob:') ? p : `/storage/sales/${p}`
+            p.startsWith('http') || p.startsWith('blob:') ? p : `/bucket_files/${p}`
           )
         }
       }
@@ -115,27 +145,31 @@ async function enrich(rows) {
         if (isConfigured) {
           try {
             const paths = r.model_files.map((m) => m.path)
-            const { data } = await supabase.storage
+            const { data, error } = await supabase.storage
               .from(BUCKET)
               .createSignedUrls(paths, SIGNED_URL_TTL)
+            if (error) throw error
             modelFiles = r.model_files.map((m, idx) => ({
               name: m.name,
-              url: data?.[idx]?.signedUrl || `/storage/sales/${m.path}`,
+              url: data?.[idx]?.signedUrl || '',
             }))
-          } catch {
+            mediaAccessWarning ||= modelFiles.some((file) => !file.url)
+          } catch (error) {
+            console.warn('Could not create signed URLs for order model files:', error)
+            mediaAccessWarning = true
             modelFiles = r.model_files.map((m) => ({
               name: m.name,
-              url: `/storage/sales/${m.path}`,
+              url: '',
             }))
           }
         } else {
           modelFiles = r.model_files.map((m) => ({
             name: m.name,
-            url: `/storage/sales/${m.path}`,
+            url: `/bucket_files/${m.path}`,
           }))
         }
       }
-      return normalizeOrder({ ...r, imageUrls, modelFiles })
+      return normalizeOrder({ ...r, imageUrls, modelFiles, mediaAccessWarning })
     })
   )
 }
@@ -157,15 +191,8 @@ const friendly = (err) => {
 export default function App() {
   const [session, setSession] = useState(null)
   const [authReady, setAuthReady] = useState(false)
-  const [currentUser, setCurrentUser] = useState(() => {
-    return localStorage.getItem('layerledger_active_user') || 'Thulasi'
-  })
-  const [operatorLoggedIn, setOperatorLoggedIn] = useState(() => {
-    return (
-      localStorage.getItem('layerledger_operator_logged_in') === 'true' ||
-      localStorage.getItem('layerledger_sandbox_session') === 'true'
-    )
-  })
+  const [currentUser, setCurrentUser] = useState('Demo Operator')
+  const [operatorLoggedIn, setOperatorLoggedIn] = useState(false)
 
   useEffect(() => {
     if (!isConfigured) {
@@ -192,9 +219,7 @@ export default function App() {
   if (!session && !operatorLoggedIn) {
     return (
       <Login
-        onEnterSandbox={(uname = 'Thulasi') => {
-          localStorage.setItem('layerledger_operator_logged_in', 'true')
-          localStorage.setItem('layerledger_active_user', uname)
+        onEnterSandbox={(uname = 'Demo Operator') => {
           setCurrentUser(uname)
           setOperatorLoggedIn(true)
         }}
@@ -214,9 +239,6 @@ export default function App() {
       isSandbox={!isConfigured}
       onSignOut={() => {
         if (isConfigured) supabase.auth.signOut()
-        localStorage.removeItem('layerledger_operator_logged_in')
-        localStorage.removeItem('layerledger_sandbox_session')
-        localStorage.removeItem('layerledger_active_user')
         setOperatorLoggedIn(false)
         setSession(null)
       }}
@@ -227,11 +249,6 @@ export default function App() {
 /* ==================================================================
    LOGIN / OPERATOR TERMINAL
    ================================================================== */
-const SITE_CREDENTIALS = {
-  userId: 'Thulasi',
-  password: 'Type-C',
-}
-
 function Login({ onEnterSandbox }) {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
@@ -246,19 +263,6 @@ function Login({ onEnterSandbox }) {
     setBusy(true)
     setErr('')
 
-    // 1. Primary site credentials check
-    if (
-      trimmedId.toLowerCase() === SITE_CREDENTIALS.userId.toLowerCase() &&
-      password === SITE_CREDENTIALS.password
-    ) {
-      setTimeout(() => {
-        onEnterSandbox(SITE_CREDENTIALS.userId)
-        setBusy(false)
-      }, 150)
-      return
-    }
-
-    // 2. Fallback to Supabase Auth if configured
     if (isConfigured) {
       try {
         const { error } = await supabase.auth.signInWithPassword({
@@ -270,11 +274,16 @@ function Login({ onEnterSandbox }) {
           setBusy(false)
           return
         }
-      } catch {}
+        throw error
+      } catch (authError) {
+        setBusy(false)
+        setErr(authError.message || 'Invalid credentials. Check your user ID and password.')
+        return
+      }
     }
 
     setBusy(false)
-    setErr('Invalid credentials. Check your user ID and password.')
+    setErr('Supabase is not configured. Use the local development preview or configure cloud access.')
   }
 
   return (
@@ -290,7 +299,11 @@ function Login({ onEnterSandbox }) {
           <span className="studio-badge">Pyraxis Prints Studio</span>
         </div>
         <h1 className="gate-title">LayerLedger Console</h1>
-        <p className="gate-sub">Sign in to track orders.</p>
+        <p className="gate-sub">
+          {isConfigured
+            ? 'Sign in with your operator account.'
+            : 'Cloud access is not configured for this installation.'}
+        </p>
 
         <FieldGroup className="gate-input-wrap space-y-3">
           <Field>
@@ -352,6 +365,16 @@ function Login({ onEnterSandbox }) {
             'Sign In to Studio Console →'
           )}
         </Button>
+        {!isConfigured && import.meta.env.DEV && (
+          <Button
+            type="button"
+            variant="outline"
+            className="mt-3 w-full"
+            onClick={() => onEnterSandbox('Demo Operator')}
+          >
+            Open local development preview
+          </Button>
+        )}
       </form>
     </div>
   )
@@ -422,24 +445,24 @@ function Ledger({ user, isSandbox, onSignOut }) {
 
         if (e) throw e
 
-        if (data && data.length > 0) {
-          const overrides = getOrderOverrides()
-          const merged = data.map((r) => {
-            const o = overrides[r.id]
-            return o ? { ...r, ...o } : r
-          })
-          const enriched = await enrich(merged)
-          setSales(enriched)
-          try {
-            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(enriched))
-          } catch {}
-          setError('')
-          setLoading(false)
-          return
+        const cloudOrders = data || []
+        const enriched = await enrich(cloudOrders)
+        setSales(enriched)
+        const warnings = []
+        if (enriched.some((order) => order.mediaAccessWarning)) {
+          warnings.push('Some private attachments could not be loaded from Supabase Storage.')
         }
+        if (!clearVerifiedLocalOrders(cloudOrders)) {
+          warnings.push('A local order copy could not be verified against Supabase and was retained for recovery.')
+        }
+        setWarningBanner(warnings.join(' '))
+        setError('')
+        setLoading(false)
+        return
       } catch (err) {
-        console.warn('Could not fetch from Supabase, loading fallback:', err)
         setError(friendly(err))
+        setLoading(false)
+        return
       }
     }
 
@@ -461,6 +484,8 @@ function Ledger({ user, isSandbox, onSignOut }) {
   }
 
   const persistSandboxSales = (newSales) => {
+    if (isConfigured) return
+
     try {
       localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(newSales))
     } catch (e) {
@@ -544,15 +569,6 @@ function Ledger({ user, isSandbox, onSignOut }) {
       setSelectedOrder(updated)
     }
 
-    await logOrderChange({
-      saleId: order.id,
-      fieldChanged: 'production_status',
-      oldValue: STATUS_LOOKUP[oldStatus]?.label || oldStatus,
-      newValue: STATUS_LOOKUP[newStatus]?.label || newStatus,
-      notes,
-      user,
-    })
-
     if (isConfigured) {
       try {
         const { error: e } = await supabase
@@ -561,10 +577,21 @@ function Ledger({ user, isSandbox, onSignOut }) {
           .eq('id', order.id)
         if (e) throw e
       } catch (err) {
-        saveOrderOverride(order.id, { production_status: newStatus })
-        setWarningBanner('Status updated locally. Cloud schema update recommended.')
+        setSales((prev) => prev.map((s) => (s.id === order.id ? order : s)))
+        setSelectedOrder((prev) => (prev?.id === order.id ? order : prev))
+        setError(friendly(err))
+        return
       }
     }
+
+    await logOrderChange({
+      saleId: order.id,
+      fieldChanged: 'production_status',
+      oldValue: STATUS_LOOKUP[oldStatus]?.label || oldStatus,
+      newValue: STATUS_LOOKUP[newStatus]?.label || newStatus,
+      notes,
+      user,
+    })
 
     setSuccessBanner(
       `Order #${order.id.slice(0, 8)} transitioned to "${STATUS_LOOKUP[newStatus]?.label || newStatus}"`
@@ -593,6 +620,21 @@ function Ledger({ user, isSandbox, onSignOut }) {
       setSelectedOrder(updated)
     }
 
+    if (isConfigured) {
+      try {
+        const { error: e } = await supabase
+          .from(TABLE)
+          .update({ price: p, weight_g: w, production_status: targetStatus })
+          .eq('id', order.id)
+        if (e) throw e
+      } catch (err) {
+        setSales((prev) => prev.map((s) => (s.id === order.id ? order : s)))
+        setSelectedOrder((prev) => (prev?.id === order.id ? order : prev))
+        setError(friendly(err))
+        return
+      }
+    }
+
     await logOrderChange({
       saleId: order.id,
       fieldChanged: 'production_status',
@@ -601,17 +643,6 @@ function Ledger({ user, isSandbox, onSignOut }) {
       notes: `Captured mandatory specs (Price: ₹${p}, Weight: ${w}g)${notes ? ` · ${notes}` : ''}`,
       user,
     })
-
-    if (isConfigured) {
-      try {
-        await supabase
-          .from(TABLE)
-          .update({ price: p, weight_g: w, production_status: targetStatus })
-          .eq('id', order.id)
-      } catch {
-        saveOrderOverride(order.id, { price: p, weight_g: w, production_status: targetStatus })
-      }
-    }
 
     setPrintingSpecsPrompt(null)
     setSuccessBanner(`Captured specs and moved order to "${STATUS_LOOKUP[targetStatus]?.label || targetStatus}"`)
@@ -629,14 +660,22 @@ function Ledger({ user, isSandbox, onSignOut }) {
 
     const updated = normalizeOrder(enriched)
 
+    if (isConfigured) {
+      try {
+        const { error: e } = await supabase.from(TABLE).update(dbUpdates).eq('id', order.id)
+        if (e) throw e
+      } catch (err) {
+        setError(friendly(err))
+        throw err
+      }
+    }
+
     setSales((prev) => {
       const next = prev.map((s) => (s.id === order.id ? updated : s))
       persistSandboxSales(next)
       return next
     })
-    if (selectedOrder?.id === order.id) {
-      setSelectedOrder(updated)
-    }
+    setSelectedOrder((prev) => (prev?.id === order.id ? updated : prev))
 
     await logOrderChange({
       saleId: order.id,
@@ -646,23 +685,23 @@ function Ledger({ user, isSandbox, onSignOut }) {
       user,
     })
 
-    if (isConfigured) {
-      try {
-        const { error: e } = await supabase.from(TABLE).update(dbUpdates).eq('id', order.id)
-        if (e) throw e
-      } catch {
-        saveOrderOverride(order.id, updates)
-      }
-    }
-
     setSuccessBanner(`Order #${order.id.slice(0, 8)} updated successfully.`)
   }
 
   // Remove order
   const removeSale = async (sale) => {
+    if (isConfigured) {
+      try {
+        const { error: e } = await supabase.from(TABLE).delete().eq('id', sale.id)
+        if (e) throw e
+      } catch (err) {
+        setError(friendly(err))
+        return
+      }
+    }
+
     setSelectedOrder(null)
     setEditingOrder(null)
-
     setSales((prev) => {
       const next = prev.filter((s) => s.id !== sale.id)
       persistSandboxSales(next)
@@ -670,15 +709,18 @@ function Ledger({ user, isSandbox, onSignOut }) {
     })
 
     if (isConfigured) {
-      try {
-        const paths = [
-          ...(sale.images || []),
-          ...(sale.model_files || []).map((m) => m.path),
-        ].filter(Boolean)
-        if (paths.length) await supabase.storage.from(BUCKET).remove(paths)
-        await supabase.from(TABLE).delete().eq('id', sale.id)
-      } catch (e) {
-        console.warn('Could not delete from Supabase:', e)
+      const paths = [
+        ...(sale.images || []),
+        ...(sale.model_files || []).map((m) => m.path),
+      ].filter(Boolean)
+      if (paths.length) {
+        const { error: storageError } = await supabase.storage.from(BUCKET).remove(paths)
+        if (storageError) {
+          setWarningBanner(
+            `Order was deleted, but its uploaded files could not be removed: ${friendly(storageError)}`
+          )
+          return
+        }
       }
     }
 

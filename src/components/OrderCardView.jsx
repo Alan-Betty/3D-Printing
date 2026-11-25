@@ -2,6 +2,7 @@ import React from 'react'
 import { getDeliveryDeadlineInfo } from '../services/orderService'
 import { STATUS_LOOKUP, WORKFLOW_STAGES, PRODUCTION_STATUSES } from '../constants/production'
 import { ColorSwatch } from './ColorSwatch'
+import { OrderContextMenu } from './OrderContextMenu'
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -82,13 +83,19 @@ export function OrderCardView({
         )
 
         return (
-          <Card
+          <OrderContextMenu
             key={o.id}
-            onClick={() => onOpenOrder(o)}
-            className={`group relative flex flex-col justify-between overflow-hidden border bg-[#111726] shadow-md transition-all hover:border-slate-700 hover:bg-[#141b2c] hover:shadow-xl cursor-pointer ${
-              isExpress ? 'border-l-4 border-l-[#ff5e1e]' : 'border-slate-800'
-            }`}
+            order={o}
+            onOpenOrder={onOpenOrder}
+            onEditOrder={onEditOrder}
+            onDeleteOrder={onDeleteOrder}
           >
+            <Card
+              onClick={() => onOpenOrder(o)}
+              className={`group relative flex flex-col justify-between overflow-hidden border bg-[#111726] shadow-md transition-all hover:border-slate-700 hover:bg-[#141b2c] hover:shadow-xl cursor-pointer ${
+                isExpress ? 'border-l-4 border-l-[#ff5e1e]' : 'border-slate-800'
+              }`}
+            >
             {/* Top Bar: ID, Date, Priority, Actions */}
             <div className="flex items-center justify-between border-b border-slate-800/80 bg-[#0a0f19]/60 px-3.5 py-2.5">
               <div className="flex items-center gap-2">
@@ -377,7 +384,8 @@ export function OrderCardView({
                 )}
               </div>
             </div>
-          </Card>
+            </Card>
+          </OrderContextMenu>
         )
       })}
     </div>

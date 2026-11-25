@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { PRODUCTION_STATUSES, STATUS_LOOKUP } from '../constants/production'
 import { getDeliveryDeadlineInfo } from '../services/orderService'
 import { ColorSwatch } from './ColorSwatch'
+import { OrderContextMenu } from './OrderContextMenu'
 import { Card, CardHeader, CardContent, CardFooter } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -225,20 +226,26 @@ export function OrderKanbanView({
                     const isBeingDragged = draggedOrderId === o.id
 
                     return (
-                      <Card
+                      <OrderContextMenu
                         key={o.id}
-                        draggable
-                        onDragStart={(e) => handleDragStart(e, o.id)}
-                        onDragEnd={handleDragEnd}
-                        onClick={() => onOpenOrder(o)}
-                        className={`group relative cursor-grab border bg-[#111726] p-3 shadow-md transition-all hover:border-slate-700 hover:bg-[#141b2c] hover:shadow-lg active:cursor-grabbing ${
-                          isBeingDragged ? 'opacity-40 scale-[0.98]' : 'opacity-100'
-                        } ${
-                          isExpress
-                            ? 'border-l-4 border-l-[#ff5e1e]'
-                            : 'border-slate-800'
-                        }`}
+                        order={o}
+                        onOpenOrder={onOpenOrder}
+                        onEditOrder={onEditOrder}
+                        onDeleteOrder={onDeleteOrder}
                       >
+                        <Card
+                          draggable
+                          onDragStart={(e) => handleDragStart(e, o.id)}
+                          onDragEnd={handleDragEnd}
+                          onClick={() => onOpenOrder(o)}
+                          className={`group relative cursor-grab border bg-[#111726] p-3 shadow-md transition-all hover:border-slate-700 hover:bg-[#141b2c] hover:shadow-lg active:cursor-grabbing ${
+                            isBeingDragged ? 'opacity-40 scale-[0.98]' : 'opacity-100'
+                          } ${
+                            isExpress
+                              ? 'border-l-4 border-l-[#ff5e1e]'
+                              : 'border-slate-800'
+                          }`}
+                        >
                         {/* Top ID & Priority Row */}
                         <div className="mb-2 flex items-center justify-between">
                           <button
@@ -461,7 +468,8 @@ export function OrderKanbanView({
                             </span>
                           )}
                         </div>
-                      </Card>
+                        </Card>
+                      </OrderContextMenu>
                     )
                   })
                 )}

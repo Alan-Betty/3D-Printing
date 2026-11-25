@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { getDeliveryDeadlineInfo } from '../services/orderService'
 import { PRODUCTION_STATUSES, STATUS_LOOKUP } from '../constants/production'
 import { ColorSwatch } from './ColorSwatch'
+import { OrderContextMenu } from './OrderContextMenu'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { ButtonGroup } from '@/components/ui/button-group'
@@ -116,13 +117,19 @@ export function OrderTableView({
               const isCopied = copiedId === o.id
 
               return (
-                <TableRow
+                <OrderContextMenu
                   key={o.id}
-                  onClick={() => onOpenOrder(o)}
-                  className={`group cursor-pointer transition-colors hover:bg-slate-800/40 ${
-                    isExpress ? 'bg-[#ff5e1e]/[0.02]' : ''
-                  }`}
+                  order={o}
+                  onOpenOrder={onOpenOrder}
+                  onEditOrder={onEditOrder}
+                  onDeleteOrder={onDeleteOrder}
                 >
+                  <TableRow
+                    onClick={() => onOpenOrder(o)}
+                    className={`group cursor-pointer transition-colors hover:bg-slate-800/40 ${
+                      isExpress ? 'bg-[#ff5e1e]/[0.02]' : ''
+                    }`}
+                  >
                   {/* Order ID */}
                   <TableCell className="py-3 pl-4 pr-3 font-mono">
                     <Tooltip>
@@ -344,7 +351,8 @@ export function OrderTableView({
                       )}
                     </ButtonGroup>
                   </TableCell>
-                </TableRow>
+                  </TableRow>
+                </OrderContextMenu>
               )
             })}
           </TableBody>

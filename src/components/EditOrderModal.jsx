@@ -70,9 +70,11 @@ export function EditOrderModal({ order, onClose, onSave, onDeleteOrder }) {
       path,
       url:
         urls[idx] ||
-        (path.startsWith('http') || path.startsWith('blob:')
-          ? path
-          : `/storage/sales/${path}`),
+        (isConfigured
+          ? ''
+          : path.startsWith('http') || path.startsWith('blob:')
+            ? path
+            : `/bucket_files/${path}`),
     }))
   })
 
@@ -82,7 +84,7 @@ export function EditOrderModal({ order, onClose, onSave, onDeleteOrder }) {
     return raw.map((m, idx) => ({
       name: m.name || enriched[idx]?.name || '3D Model',
       path: m.path || enriched[idx]?.path || '',
-      url: enriched[idx]?.url || (m.path ? `/storage/sales/${m.path}` : ''),
+      url: enriched[idx]?.url || (isConfigured || !m.path ? '' : `/bucket_files/${m.path}`),
     }))
   })
 

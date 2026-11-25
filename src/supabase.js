@@ -1,10 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 
-/* Supabase project credentials.
-   The anon key is public by design (like a Firebase apiKey) — your data is
-   protected by Row Level Security, not by hiding this key.
-   Fill these in from Supabase dashboard → Project Settings → API, or set
-   VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY in a .env.local file. */
+/* Use the public anon key here; database and storage access must be protected
+   by Supabase Auth and Row Level Security. Never use a service-role key in client code. */
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'YOUR_SUPABASE_URL'
 const SUPABASE_ANON_KEY =
   import.meta.env.VITE_SUPABASE_ANON_KEY || 'YOUR_SUPABASE_ANON_KEY'

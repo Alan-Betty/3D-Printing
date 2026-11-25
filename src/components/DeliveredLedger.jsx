@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react'
 import { calculateFilamentMetrics } from '../services/orderService'
 import { STATUS_LOOKUP } from '../constants/production'
+import { OrderContextMenu } from './OrderContextMenu'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -300,11 +301,17 @@ export function DeliveredLedger({
                 const isExpress = s.priority === 'express' || s.print_type === 'express'
 
                 return (
-                  <TableRow
+                  <OrderContextMenu
                     key={s.id}
-                    className="border-slate-800/80 hover:bg-slate-800/40 cursor-pointer"
-                    onClick={() => onOpenOrder(s)}
+                    order={s}
+                    onOpenOrder={onOpenOrder}
+                    onEditOrder={onEditOrder}
+                    onDeleteOrder={onRemoveOrder}
                   >
+                    <TableRow
+                      className="border-slate-800/80 hover:bg-slate-800/40 cursor-pointer"
+                      onClick={() => onOpenOrder(s)}
+                    >
                     <TableCell className="font-mono text-xs font-bold text-cyan">
                       L-{String(idx).padStart(2, '0')}
                     </TableCell>
@@ -418,7 +425,8 @@ export function DeliveredLedger({
                         )}
                       </ButtonGroup>
                     </TableCell>
-                  </TableRow>
+                    </TableRow>
+                  </OrderContextMenu>
                 )
               })}
             </TableBody>
@@ -434,11 +442,17 @@ export function DeliveredLedger({
             const isExpress = s.priority === 'express' || s.print_type === 'express'
 
             return (
-              <Card
+              <OrderContextMenu
                 key={s.id}
-                onClick={() => onOpenOrder(s)}
-                className="group flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-slate-800 bg-[#0e1422] p-3.5 hover:border-slate-700 hover:bg-[#111728] transition-all cursor-pointer"
+                order={s}
+                onOpenOrder={onOpenOrder}
+                onEditOrder={onEditOrder}
+                onDeleteOrder={onRemoveOrder}
               >
+                <Card
+                  onClick={() => onOpenOrder(s)}
+                  className="group flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-slate-800 bg-[#0e1422] p-3.5 hover:border-slate-700 hover:bg-[#111728] transition-all cursor-pointer"
+                >
                 {/* Left: Layer Number & Item component */}
                 <Item className="gap-3 min-w-0">
                   <ItemMedia className="flex h-9 w-12 shrink-0 items-center justify-center rounded bg-slate-900 border border-slate-800 font-mono text-xs font-bold text-cyan">
@@ -578,7 +592,8 @@ export function DeliveredLedger({
                     )}
                   </ButtonGroup>
                 </div>
-              </Card>
+                </Card>
+              </OrderContextMenu>
             )
           })}
         </div>
