@@ -79,7 +79,7 @@ create table if not exists public.order_history (
 
 create index if not exists order_history_sale_id_idx on public.order_history (sale_id, created_at desc);
 
--- 3. Row Level Security: Allow authenticated and anon access
+-- 3. Row Level Security: Authenticated operators only
 alter table public.sales enable row level security;
 alter table public.order_history enable row level security;
 
@@ -91,11 +91,6 @@ create policy "authenticated full access"
   with check (true);
 
 drop policy if exists "anon access to sales" on public.sales;
-create policy "anon access to sales"
-  on public.sales for all
-  to anon
-  using (true)
-  with check (true);
 
 drop policy if exists "authenticated history access" on public.order_history;
 create policy "authenticated history access"
@@ -105,11 +100,6 @@ create policy "authenticated history access"
   with check (true);
 
 drop policy if exists "anon access to order_history" on public.order_history;
-create policy "anon access to order_history"
-  on public.order_history for all
-  to anon
-  using (true)
-  with check (true);
 
 -- 4. Realtime publication (safe idempotency)
 do $$
@@ -128,25 +118,29 @@ end $$;
 
 -- 5. Storage bucket for model files and photo uploads
 insert into storage.buckets (id, name, public)
-values ('sales', 'sales', true)
-on conflict (id) do nothing;
+values ('sales', 'sales', false)
+on conflict (id) do update set public = false;
 
 drop policy if exists "sales bucket select" on storage.objects;
 create policy "sales bucket select"
   on storage.objects for select
+  to authenticated
   using (bucket_id = 'sales');
 
 drop policy if exists "sales bucket insert" on storage.objects;
 create policy "sales bucket insert"
   on storage.objects for insert
+  to authenticated
   with check (bucket_id = 'sales');
 
 drop policy if exists "sales bucket update" on storage.objects;
 create policy "sales bucket update"
   on storage.objects for update
+  to authenticated
   using (bucket_id = 'sales');
 
 drop policy if exists "sales bucket delete" on storage.objects;
 create policy "sales bucket delete"
   on storage.objects for delete
+  to authenticated
   using (bucket_id = 'sales');

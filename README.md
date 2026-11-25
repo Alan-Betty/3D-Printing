@@ -56,21 +56,26 @@ Vite client configuration; access control must be enforced by Supabase Auth and 
 ### 3. Run Database Migrations
 1. Open your [Supabase Dashboard](https://supabase.com/dashboard).
 2. Go to **SQL Editor** → **New Query**.
-3. Copy and run the SQL code from [`supabase/schema.sql`](supabase/schema.sql).
+3. Copy and run the SQL code from [`supabase/schema.sql`](supabase/schema.sql). If you previously
+   ran an older version of this setup, run the updated script again to remove anonymous access and
+   make the `sales` bucket private.
 
 This script:
 - Creates the `public.sales` table and indices.
 - Configures Row Level Security (RLS) policies for authenticated operators.
 - Enables Realtime replication on `public.sales`.
 - Creates the private `sales` storage bucket with authenticated RLS access policies.
+- Removes anonymous (`anon`) table policies; only signed-in Supabase users can access orders and files.
 
 For an existing database, run [`supabase/migrations/002_model_link.sql`](supabase/migrations/002_model_link.sql) to add model links.
 
 ### 4. Create an Operator User
 1. In the Supabase Dashboard, go to **Authentication** → **Users**.
 2. Click **Add User** → **Create User**.
-3. Email: `<username>@pyraxis-prints.app` (e.g. `operator@pyraxis-prints.app` or `rick@pyraxis-prints.app`).
+3. Email: `<username>@pyraxis-prints.app` (for example `thulasi@pyraxis-prints.app`).
 4. Set an operator password and confirm creation.
+5. In the app, enter the full email address you created, or just its username (for example
+   `thulasi`). The username form maps to `thulasi@pyraxis-prints.app`.
 
 ### 5. Launch the Console
 ```bash

@@ -106,7 +106,10 @@ const clearVerifiedLocalOrders = (cloudOrders) => {
 }
 
 const EMAIL_DOMAIN = 'pyraxis-prints.app'
-const toEmail = (u) => `${u.trim().toLowerCase()}@${EMAIL_DOMAIN}`
+const toEmail = (userId) => {
+  const normalized = userId.trim().toLowerCase()
+  return normalized.includes('@') ? normalized : `${normalized}@${EMAIL_DOMAIN}`
+}
 
 const money = (n) =>
   Number(n || 0).toLocaleString('en-IN', {
@@ -307,15 +310,18 @@ function Login({ onEnterSandbox }) {
 
         <FieldGroup className="gate-input-wrap space-y-3">
           <Field>
-            <FieldLabel htmlFor="g-user">Site User ID</FieldLabel>
+            <FieldLabel htmlFor="g-user">Username or email</FieldLabel>
             <Input
               id="g-user"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              placeholder="Enter Site User ID"
+              placeholder="Username or full email"
               autoComplete="username"
               required
             />
+            <p className="mt-1 text-xs text-slate-400">
+              Enter your full Supabase email, or just the username before @pyraxis-prints.app.
+            </p>
           </Field>
 
           <Field>
